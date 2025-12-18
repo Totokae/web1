@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruleta Misteriosa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top, #1f2937 0%, #020617 55%, #000 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            color: #e5e7eb;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            width: 100%;
+        }
+
+        /* Panel izquierdo: info / tabla de puntajes */
+        .info-panel {
+            background: rgba(15, 23, 42, 0.96);
+            padding: 28px 24px;
+            box-shadow: 4px 0 18px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .info-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #fbbf24;
+            text-align: center;
+        }
+
+        .student-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .student-name {
+            min-height: 48px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            font-size: 18px;
+            font-weight: 600;
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .score-table {
+            margin-top: 8px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            padding: 14px 16px;
+        }
+
+        .score-table-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 4px;
+            font-size: 14px;
+            color: #e5e7eb;
+        }
+
+        .score-row + .score-row {
+            border-top: 1px dashed rgba(55, 65, 81, 0.9);
+        }
+
+        .score-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+        }
+
+        .dot-yellow { background: #facc15; }
+        .dot-orange { background: #fb923c; }
+        .dot-red { background: #ef4444; }
+
+        .score-points {
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        .small-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        /* Zona derecha: juego */
+        .game-panel {
+            flex: 1;
+            padding: 32px 32px 32px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .title {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            color: #fbbf24;
+            text-shadow:
+                0 0 18px rgba(250, 191, 36, 0.7),
+                0 4px 8px rgba(0, 0, 0, 0.9);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .roulette-wrapper {
+            margin-top: 10px;
+            position: relative;
+            width: 360px;
+            height: 220px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .roulette-view {
+            position: relative;
+            width: 360px;
+            height: 180px;
+            overflow: hidden;
+            border-radius: 180px 180px 0 0;
+            background: radial-gradient(circle at 30% 0, #111827 0%, #020617 50%, #000 100%);
+            box-shadow:
+                0 18px 40px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(15, 23, 42, 0.8);
+        }
+
+        .wheel {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 340px;
+            height: 340px;
+            margin-left: -170px;
+            border-radius: 50%;
+            background:
+                conic-gradient(
+                    from 0deg,
+                    #111827 0deg 155deg,
+                    #facc15 155deg 165deg,
+                    #fb923c 165deg 175deg,
+                    #ef4444 175deg 185deg,
+                    #fb923c 185deg 195deg,
+                    #facc15 195deg 205deg,
+                    #111827 205deg 360deg
+                );
+            box-shadow:
+                0 0 0 6px rgba(15, 23, 42, 0.9),
+                0 0 0 1px rgba(148, 163, 184, 0.4),
+                inset 0 0 26px rgba(0, 0, 0, 0.9);
+            transition: transform 2s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 20%, #e5e7eb 0, #9ca3af 45%, #020617 100%);
+            box-shadow:
+                0 0 0 3px rgba(15, 23, 42, 0.9),
+                0 6px 18px rgba(0, 0, 0, 0.9);
+        }
+
+        .pointer {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-bottom: 22px solid #fbbf24;
+            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7));
+            z-index: 4;
+        }
+
+        /* Cortina */
+        .curtain {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 360px;
+            height: 180px;
+            border-radius: 180px 180px 0 0;
+            background: radial-gradient(circle at top, rgba(15, 23, 42, 0.96), rgba(0, 0, 0, 0.98));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f9fafb;
+            font-size: 16px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+            z-index: 5;
+            transition: transform 0.45s ease-in-out, opacity 0.45s ease-in-out;
+        }
+
+        .curtain.hidden {
+            transform: translate(-50%, 110%);
+            opacity: 0;
+            box-shadow: none;
+        }
+
+        /* Controles */
+        .controls {
+            display: flex;
+            gap: 14px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border-radius: 999px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #0b1120;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            box-shadow: 0 10px 25px rgba(250, 204, 21, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.2s ease;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #1f2937, #0f172a);
+            color: #e5e7eb;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+        }
+
+        .btn:active {
+            transform: translateY(1px) scale(0.99);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .info-panel {
+                border-bottom: 1px solid rgba(31, 41, 55, 0.8);
+            }
+
+            .game-panel {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Panel izquierdo: leyenda y alumno -->
+        <aside class="info-panel">
+            <div class="info-title">Leyenda de Puntajes</div>
+
+            <div>
+                <div class="student-label">Alumno seleccionado</div>
+                <div id="studentName" class="student-name">Sin selección</div>
+            </div>
+
+            <div class="score-table">
+                <div class="score-table-title">Colores de la ruleta</div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-yellow"></span>
+                        <span>Segmento Amarillo</span>
+                    </div>
+                    <span class="score-points">1 punto</span>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-orange"></span>
+                        <span>Segmento Naranja</span>
+                    </div>
+                    <span class="score-points">3 puntos</span>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-red"></span>
+                        <span>Segmento Rojo</span>
+                    </div>
+                    <span class="score-points">5 puntos</span>
+                </div>
+
+                <p class="small-note">
+                    La ruleta muestra siempre un bloque especial de 50° con la secuencia
+                    1-3-5-3-1 visible en el semicírculo superior.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Panel derecho: juego -->
+        <main class="game-panel">
+            <div class="title">RULETA MISTERIOSA</div>
+            <p class="subtitle">
+                Gira la ruleta. El bloque de colores siempre caerá en la zona visible,
+                pero el resultado sigue siendo un misterio para el alumno.
+            </p>
+
+            <div class="roulette-wrapper">
+                <div class="roulette-view">
+                    <div class="wheel" id="wheel">
+                        <div class="wheel-center"></div>
+                    </div>
+                    <div class="curtain" id="curtain">RESULTADO OCULTO</div>
+                </div>
+                <div class="pointer"></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="spinBtn">Girar</button>
+                <button class="btn btn-secondary" id="toggleCurtainBtn">Esconder / Mostrar</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Lógica de alumnos desde localStorage (clave 'listaEstudiantes') ---
+        function getStudentList() {
+            const savedList = localStorage.getItem('listaEstudiantes') || '';
+            if (!savedList.trim()) return [];
+
+            return savedList
+                .split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+        }
+
+        // Manejo de índice secuencial
+        function getCurrentStudentIndex(max) {
+            const stored = parseInt(localStorage.getItem('indiceRuletaMisteriosa') || '0', 10);
+            if (isNaN(stored) || stored < 0) return 0;
+            if (stored >= max) return 0;
+            return stored;
+        }
+
+        function setCurrentStudentIndex(index) {
+            localStorage.setItem('indiceRuletaMisteriosa', String(index));
+        }
+
+        // Mostrar alumno actual sin avanzar
+        function showCurrentStudent() {
+            const studentNameEl = document.getElementById('studentName');
+            const students = getStudentList();
+            if (!students.length) {
+                studentNameEl.textContent = 'No hay alumnos en listaEstudiantes';
+                return;
+            }
+            const idx = getCurrentStudentIndex(students.length);
+            studentNameEl.textContent = students[idx];
+        }
+
+        // Avanzar al siguiente alumno en orden circular
+        function advanceStudent() {
+            const studentNameEl = document.getElementById('studentName');
+            const students = getStudentList();
+            if (!students.length) {
+                studentNameEl.textContent = 'No hay alumnos en listaEstudiantes';
+                return;
+            }
+            let idx = getCurrentStudentIndex(students.length);
+            idx = (idx + 1) % students.length;
+            setCurrentStudentIndex(idx);
+            studentNameEl.textContent = students[idx];
+        }
+
+        // --- Lógica de ruleta ---
+        const wheel = document.getElementById('wheel');
+        const curtain = document.getElementById('curtain');
+        const spinBtn = document.getElementById('spinBtn');
+        const toggleCurtainBtn = document.getElementById('toggleCurtainBtn');
+
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        function spinMysteryWheel() {
+            if (isSpinning) return;
+            isSpinning = true;
+            spinBtn.disabled = true;
+
+            // Queremos que el bloque especial (155° a 205°) quede entre 45° y 135° visibles.
+            // Bloque centro = 180°. Tomamos un ángulo visible entre 45 y 135 para ese centro.
+            const centerVisibleMin = 45;
+            const centerVisibleMax = 135;
+            const targetCenterVisible =
+                centerVisibleMin + Math.random() * (centerVisibleMax - centerVisibleMin);
+
+            // Diferencia que debemos aplicar para llevar el centro (180°) a ese rango.
+            const deltaWithinCircle = targetCenterVisible - 180; // puede ser negativo o positivo
+
+            // Varias vueltas completas para el efecto visual.
+            const fullTurns = 4 + Math.floor(Math.random() * 3); // 4–6 vueltas
+            const deltaTotal = fullTurns * 360 + deltaWithinCircle;
+
+            currentRotation += deltaTotal;
+            wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
+
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                // Avanzamos al siguiente alumno en orden
+                advanceStudent();
+            }, 2100); // un poco más que la transición de 2s
+        }
+
+        function toggleCurtain() {
+            curtain.classList.toggle('hidden');
+        }
+
+        spinBtn.addEventListener('click', spinMysteryWheel);
+        toggleCurtainBtn.addEventListener('click', toggleCurtain);
+
+        // Al cargar la página, mostramos el alumno actual (sin avanzar)
+        showCurrentStudent();
+    </script>
+</body>
+</html>
+
+
