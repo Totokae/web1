@@ -102,16 +102,6 @@
             font-weight: bold;
         }
 
-        .nav-button.wip {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .nav-button.wip:hover {
-            transform: none;
-            border-color: rgba(212, 175, 55, 0.3);
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-        }
 
         /* Animaciones */
         @keyframes fadeInDown {
@@ -197,17 +187,7 @@
     </div>
 
     <script>
-        // Prevenir navegación en botones W.I.P
-        document.querySelectorAll('.nav-button.wip').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                // Efecto visual de "no disponible"
-                button.style.transform = 'scale(0.98)';
-                setTimeout(() => {
-                    button.style.transform = '';
-                }, 200);
-            });
-        });
+        // Todo listo - todos los botones están activos y funcionando
     </script>
 </body>
 </html>
