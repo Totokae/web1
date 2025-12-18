@@ -103,6 +103,45 @@
             overflow: hidden;
         }
 
+        /* Aguja circular arrastrable */
+        .needle-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%) rotate(0deg);
+            z-index: 6;
+            pointer-events: none; /* solo la aguja capta eventos */
+        }
+
+        .needle {
+            position: absolute;
+            bottom: 0;
+            left: -3px;
+            width: 6px;
+            height: 110px;
+            background: #ff4757;
+            border-radius: 999px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+            transform-origin: bottom center;
+            cursor: grab;
+            pointer-events: auto;
+        }
+
+        .needle::after {
+            content: '';
+            position: absolute;
+            bottom: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+
         .wheel {
             position: relative;
             width: 82%;
@@ -320,6 +359,9 @@
             <div class="roulette-wrapper">
                 <div class="roulette-container">
                     <div class="pointer"></div>
+                    <div id="needleWrapper" class="needle-wrapper">
+                        <div id="needle" class="needle"></div>
+                    </div>
                     <div id="wheel" class="wheel">
                         <div class="segment-labels">
                             <div class="segment-label s1">1</div>
@@ -384,9 +426,14 @@
         const resultValue = document.getElementById('resultValue');
         const spinBtn = document.getElementById('spinBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const needleWrapper = document.getElementById('needleWrapper');
+        const needle = document.getElementById('needle');
+        const rouletteContainer = document.querySelector('.roulette-container');
 
         let currentRotation = 0;
         let isSpinning = false;
+        let isDraggingNeedle = false;
+        let currentNeedleAngle = 0;
 
         function spinRoulette() {
             if (isSpinning) return;
@@ -414,6 +461,9 @@
             setTimeout(() => {
                 centerScore.textContent = finalScore;
                 resultValue.textContent = finalScore;
+                // Recolocamos la aguja apuntando hacia arriba tras el giro
+                currentNeedleAngle = 0;
+                needleWrapper.style.transform = 'translate(-50%, -50%) rotate(0deg)';
                 isSpinning = false;
                 spinBtn.disabled = false;
             }, 2700); // ligeramente mayor que la duración de la transición (2.6s)
@@ -426,10 +476,71 @@
             wheel.style.transform = 'rotate(0deg)';
             centerScore.textContent = '?';
             resultValue.textContent = '–';
+            currentNeedleAngle = 0;
+            needleWrapper.style.transform = 'translate(-50%, -50%) rotate(0deg)';
         }
 
         spinBtn.addEventListener('click', spinRoulette);
         resetBtn.addEventListener('click', resetRoulette);
+
+        // --- Lógica de arrastre manual de la aguja ---
+        function updateScoreFromNeedle(angleDeg) {
+            // Normalizamos ángulo a [0, 360)
+            let norm = ((angleDeg % 360) + 360) % 360;
+
+            // CSS rota en sentido horario, pero nuestros segmentos están definidos
+            // en el mismo sentido, empezando en la parte superior.
+            const index = Math.floor(norm / segmentAngle) % segmentValues.length;
+            const value = segmentValues[index];
+
+            centerScore.textContent = value;
+            resultValue.textContent = value;
+        }
+
+        function handleNeedleMove(e) {
+            if (!isDraggingNeedle || isSpinning) return;
+
+            const rect = rouletteContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const deltaX = clientX - centerX;
+            const deltaY = clientY - centerY;
+
+            const radians = Math.atan2(deltaY, deltaX);
+            const degrees = radians * (180 / Math.PI) + 90; // offset para que 0° sea hacia arriba
+
+            currentNeedleAngle = degrees;
+            needleWrapper.style.transform = 'translate(-50%, -50%) rotate(' + degrees + 'deg)';
+            updateScoreFromNeedle(degrees);
+        }
+
+        needle.addEventListener('mousedown', () => {
+            if (isSpinning) return;
+            isDraggingNeedle = true;
+            needle.style.cursor = 'grabbing';
+        });
+
+        needle.addEventListener('touchstart', (e) => {
+            if (isSpinning) return;
+            isDraggingNeedle = true;
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingNeedle = false;
+            needle.style.cursor = 'grab';
+        });
+
+        window.addEventListener('touchend', () => {
+            isDraggingNeedle = false;
+        });
+
+        window.addEventListener('mousemove', handleNeedleMove);
+        window.addEventListener('touchmove', handleNeedleMove, { passive: false });
     </script>
 </body>
 </html>
