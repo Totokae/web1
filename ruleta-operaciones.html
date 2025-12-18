@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruleta Mental - Academia Fibonacci</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            color: #333;
+            transition: background 0.5s ease;
+        }
+
+        /* Estilos dinámicos según operador */
+        body.operation-sum {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        body.operation-subtract {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        }
+
+        body.operation-multiply {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Barra Lateral */
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 30px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-align: center;
+        }
+
+        .sidebar textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .sidebar textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .sidebar button {
+            padding: 15px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .sidebar button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .sidebar button:active {
+            transform: translateY(0);
+        }
+
+        /* Área Principal */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .challenge-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .student-name {
+            font-size: 72px;
+            font-weight: bold;
+            margin-bottom: 50px;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 50px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            width: 300px;
+            height: 300px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 120px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: scaleIn 0.5s ease-out;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        .card-number {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .operator-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 4px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: scaleIn 0.5s ease-out;
+            transition: transform 0.3s;
+        }
+
+        .operator-circle:hover {
+            transform: scale(1.1);
+        }
+
+        .next-button {
+            padding: 25px 60px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 15px;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .next-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            background: #f0f0f0;
+        }
+
+        .next-button:active {
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            font-size: 24px;
+            color: #ffeb3b;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,0,0,0.2);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .challenge-title {
+                font-size: 36px;
+            }
+
+            .student-name {
+                font-size: 48px;
+            }
+
+            .card {
+                width: 250px;
+                height: 250px;
+                font-size: 100px;
+            }
+
+            .operator-circle {
+                width: 120px;
+                height: 120px;
+                font-size: 60px;
+            }
+
+            .next-button {
+                font-size: 24px;
+                padding: 20px 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra Lateral -->
+    <aside class="sidebar">
+        <h2>Lista de Estudiantes</h2>
+        <textarea id="studentList" placeholder="Ingresa los nombres de los estudiantes, uno por línea:
+
+Ejemplo:
+Juan Pérez
+María González
+Carlos López"></textarea>
+        <button id="saveButton">Guardar Lista</button>
+    </aside>
+
+    <!-- Área Principal -->
+    <main class="main-content">
+        <div class="challenge-title">RULETA MENTAL</div>
+        
+        <div class="student-name" id="studentName">
+            ¡Comienza el desafío!
+        </div>
+
+        <div class="cards-container">
+            <div class="card">
+                <div class="card-number" id="numberOne">?</div>
+            </div>
+            <div class="operator-circle" id="operatorCircle">?</div>
+            <div class="card">
+                <div class="card-number" id="numberTwo">?</div>
+            </div>
+        </div>
+
+        <button class="next-button" id="nextButton">Siguiente Desafío</button>
+
+        <div class="error-message" id="errorMessage">
+            ⚠️ Por favor, ingresa nombres de estudiantes primero y haz clic en "Guardar Lista"
+        </div>
+    </main>
+
+    <script>
+        // Elementos del DOM
+        const studentListTextarea = document.getElementById('studentList');
+        const saveButton = document.getElementById('saveButton');
+        const nextButton = document.getElementById('nextButton');
+        const studentNameDisplay = document.getElementById('studentName');
+        const numberOne = document.getElementById('numberOne');
+        const numberTwo = document.getElementById('numberTwo');
+        const operatorCircle = document.getElementById('operatorCircle');
+        const errorMessage = document.getElementById('errorMessage');
+        const body = document.body;
+
+        // Cargar lista guardada al iniciar desde listaEstudiantes
+        function loadSavedList() {
+            const savedList = localStorage.getItem('listaEstudiantes');
+            if (savedList) {
+                studentListTextarea.value = savedList;
+            }
+        }
+
+        // Guardar lista en localStorage con la clave listaEstudiantes
+        function saveList() {
+            const list = studentListTextarea.value.trim();
+            localStorage.setItem('listaEstudiantes', list);
+            
+            // Feedback visual
+            saveButton.textContent = '✓ Guardado';
+            saveButton.style.background = '#4caf50';
+            setTimeout(() => {
+                saveButton.textContent = 'Guardar Lista';
+                saveButton.style.background = '#667eea';
+            }, 2000);
+        }
+
+        // Obtener lista de estudiantes
+        function getStudentList() {
+            // Primero intentar desde el textarea
+            let list = studentListTextarea.value.trim();
+            // Si está vacío, intentar desde localStorage
+            if (!list) {
+                list = localStorage.getItem('listaEstudiantes') || '';
+                if (list) {
+                    studentListTextarea.value = list;
+                }
+            }
+            if (!list) {
+                return [];
+            }
+            // Dividir por líneas y filtrar líneas vacías
+            return list.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+        }
+
+        // Seleccionar estudiante aleatorio
+        function getRandomStudent(students) {
+            if (students.length === 0) return null;
+            const randomIndex = Math.floor(Math.random() * students.length);
+            return students[randomIndex];
+        }
+
+        // Generar número aleatorio entre 1 y 12
+        function getRandomNumber() {
+            return Math.floor(Math.random() * 12) + 1;
+        }
+
+        // Generar operador aleatorio
+        function getRandomOperator() {
+            const operators = ['+', '-', '×'];
+            const randomIndex = Math.floor(Math.random() * operators.length);
+            return operators[randomIndex];
+        }
+
+        // Cambiar el fondo según el operador
+        function setBackgroundByOperator(operator) {
+            // Remover todas las clases de operación
+            body.classList.remove('operation-sum', 'operation-subtract', 'operation-multiply');
+            
+            // Agregar la clase correspondiente
+            if (operator === '+') {
+                body.classList.add('operation-sum');
+            } else if (operator === '-') {
+                body.classList.add('operation-subtract');
+            } else if (operator === '×') {
+                body.classList.add('operation-multiply');
+            }
+        }
+
+        // Animar números
+        function animateNumber(element, value) {
+            element.style.opacity = '0';
+            element.style.transform = 'scale(0.5)';
+            
+            setTimeout(() => {
+                element.textContent = value;
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        // Animar operador
+        function animateOperator(element, operator) {
+            element.style.opacity = '0';
+            element.style.transform = 'scale(0.5)';
+            
+            setTimeout(() => {
+                element.textContent = operator;
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        // Mostrar siguiente desafío
+        function showNextChallenge() {
+            const students = getStudentList();
+            
+            // Validar que hay estudiantes
+            if (students.length === 0) {
+                errorMessage.classList.add('show');
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+                return;
+            }
+
+            // Ocultar mensaje de error si está visible
+            errorMessage.classList.remove('show');
+
+            // Seleccionar estudiante aleatorio
+            const selectedStudent = getRandomStudent(students);
+            
+            // Animar cambio de nombre
+            studentNameDisplay.style.opacity = '0';
+            setTimeout(() => {
+                studentNameDisplay.textContent = selectedStudent;
+                studentNameDisplay.style.opacity = '1';
+            }, 150);
+
+            // Generar números (ambos entre 1 y 12)
+            const num1 = getRandomNumber();
+            const num2 = getRandomNumber();
+            
+            // Generar operador aleatorio
+            const operator = getRandomOperator();
+            
+            // Cambiar el fondo según el operador
+            setBackgroundByOperator(operator);
+            
+            // Animar números y operador
+            animateNumber(numberOne, num1);
+            animateNumber(numberTwo, num2);
+            animateOperator(operatorCircle, operator);
+
+            // Reiniciar animación de las tarjetas y el círculo
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.style.animation = 'none';
+                setTimeout(() => {
+                    card.style.animation = 'scaleIn 0.5s ease-out';
+                }, 10);
+            });
+            
+            operatorCircle.style.animation = 'none';
+            setTimeout(() => {
+                operatorCircle.style.animation = 'scaleIn 0.5s ease-out';
+            }, 10);
+        }
+
+        // Event Listeners
+        saveButton.addEventListener('click', saveList);
+        nextButton.addEventListener('click', showNextChallenge);
+
+        // Permitir guardar con Enter (Ctrl+Enter o Cmd+Enter)
+        studentListTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                saveList();
+            }
+        });
+
+        // Cargar lista guardada al iniciar
+        loadSavedList();
+    </script>
+</body>
+</html>
+

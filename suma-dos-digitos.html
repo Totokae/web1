@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suma de 2 Dígitos - Academia Fibonacci</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #2dd4bf 100%);
+            min-height: 100vh;
+            display: flex;
+            color: #333;
+        }
+
+        /* Barra Lateral */
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 30px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #0f766e;
+            text-align: center;
+        }
+
+        .sidebar textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .sidebar textarea:focus {
+            outline: none;
+            border-color: #0f766e;
+        }
+
+        .sidebar button {
+            padding: 15px 25px;
+            background: #0f766e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .sidebar button:hover {
+            background: #14b8a6;
+            transform: translateY(-2px);
+        }
+
+        .sidebar button:active {
+            transform: translateY(0);
+        }
+
+        /* Área Principal */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .challenge-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .student-name {
+            font-size: 72px;
+            font-weight: bold;
+            margin-bottom: 50px;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 50px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            width: 350px;
+            height: 350px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 140px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        .card-number-one {
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            color: white;
+        }
+
+        .card-number-two {
+            background: linear-gradient(135deg, #2dd4bf 0%, #5eead4 100%);
+            color: white;
+        }
+
+        .card-number {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .addition-sign {
+            font-size: 120px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .next-button {
+            padding: 25px 60px;
+            background: white;
+            color: #0f766e;
+            border: none;
+            border-radius: 15px;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .next-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            background: #f0f0f0;
+        }
+
+        .next-button:active {
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            font-size: 24px;
+            color: #ffeb3b;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,0,0,0.2);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .challenge-title {
+                font-size: 36px;
+            }
+
+            .student-name {
+                font-size: 48px;
+            }
+
+            .card {
+                width: 280px;
+                height: 280px;
+                font-size: 110px;
+            }
+
+            .addition-sign {
+                font-size: 90px;
+            }
+
+            .next-button {
+                font-size: 24px;
+                padding: 20px 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra Lateral -->
+    <aside class="sidebar">
+        <h2>Lista de Estudiantes</h2>
+        <textarea id="studentList" placeholder="Ingresa los nombres de los estudiantes, uno por línea:
+
+Ejemplo:
+Juan Pérez
+María González
+Carlos López"></textarea>
+        <button id="saveButton">Guardar Lista</button>
+    </aside>
+
+    <!-- Área Principal -->
+    <main class="main-content">
+        <div class="challenge-title">SUMA DE 2 DÍGITOS</div>
+        
+        <div class="student-name" id="studentName">
+            ¡Comienza el desafío!
+        </div>
+
+        <div class="cards-container">
+            <div class="card card-number-one">
+                <div class="card-number" id="numberOne">?</div>
+            </div>
+            <div class="addition-sign" id="additionSign">+</div>
+            <div class="card card-number-two">
+                <div class="card-number" id="numberTwo">?</div>
+            </div>
+        </div>
+
+        <button class="next-button" id="nextButton">Siguiente Desafío</button>
+
+        <div class="error-message" id="errorMessage">
+            ⚠️ Por favor, ingresa nombres de estudiantes primero y haz clic en "Guardar Lista"
+        </div>
+    </main>
+
+    <script>
+        // Elementos del DOM
+        const studentListTextarea = document.getElementById('studentList');
+        const saveButton = document.getElementById('saveButton');
+        const nextButton = document.getElementById('nextButton');
+        const studentNameDisplay = document.getElementById('studentName');
+        const numberOne = document.getElementById('numberOne');
+        const numberTwo = document.getElementById('numberTwo');
+        const additionSign = document.getElementById('additionSign');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Cargar lista guardada al iniciar desde listaEstudiantes
+        function loadSavedList() {
+            const savedList = localStorage.getItem('listaEstudiantes');
+            if (savedList) {
+                studentListTextarea.value = savedList;
+            }
+        }
+
+        // Guardar lista en localStorage con la clave listaEstudiantes
+        function saveList() {
+            const list = studentListTextarea.value.trim();
+            localStorage.setItem('listaEstudiantes', list);
+            
+            // Feedback visual
+            saveButton.textContent = '✓ Guardado';
+            saveButton.style.background = '#4caf50';
+            setTimeout(() => {
+                saveButton.textContent = 'Guardar Lista';
+                saveButton.style.background = '#0f766e';
+            }, 2000);
+        }
+
+        // Obtener lista de estudiantes
+        function getStudentList() {
+            // Primero intentar desde el textarea
+            let list = studentListTextarea.value.trim();
+            // Si está vacío, intentar desde localStorage
+            if (!list) {
+                list = localStorage.getItem('listaEstudiantes') || '';
+                if (list) {
+                    studentListTextarea.value = list;
+                }
+            }
+            if (!list) {
+                return [];
+            }
+            // Dividir por líneas y filtrar líneas vacías
+            return list.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+        }
+
+        // Seleccionar estudiante aleatorio
+        function getRandomStudent(students) {
+            if (students.length === 0) return null;
+            const randomIndex = Math.floor(Math.random() * students.length);
+            return students[randomIndex];
+        }
+
+        // Generar número aleatorio de dos dígitos (10 a 99)
+        function getRandomTwoDigitNumber() {
+            return Math.floor(Math.random() * 90) + 10; // 90 números posibles (10-99)
+        }
+
+        // Animar números
+        function animateNumber(element, value) {
+            element.style.opacity = '0';
+            element.style.transform = 'scale(0.5)';
+            
+            setTimeout(() => {
+                element.textContent = value;
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        // Animar signo de suma
+        function animateSign() {
+            additionSign.style.opacity = '0';
+            additionSign.style.transform = 'scale(0.5)';
+            
+            setTimeout(() => {
+                additionSign.textContent = '+';
+                additionSign.style.opacity = '1';
+                additionSign.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        // Mostrar siguiente desafío
+        function showNextChallenge() {
+            const students = getStudentList();
+            
+            // Validar que hay estudiantes
+            if (students.length === 0) {
+                errorMessage.classList.add('show');
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+                return;
+            }
+
+            // Ocultar mensaje de error si está visible
+            errorMessage.classList.remove('show');
+
+            // Seleccionar estudiante aleatorio
+            const selectedStudent = getRandomStudent(students);
+            
+            // Animar cambio de nombre
+            studentNameDisplay.style.opacity = '0';
+            setTimeout(() => {
+                studentNameDisplay.textContent = selectedStudent;
+                studentNameDisplay.style.opacity = '1';
+            }, 150);
+
+            // Generar números de dos dígitos (ambos entre 10 y 99)
+            const num1 = getRandomTwoDigitNumber();
+            const num2 = getRandomTwoDigitNumber();
+            
+            animateNumber(numberOne, num1);
+            animateNumber(numberTwo, num2);
+            animateSign();
+
+            // Reiniciar animación de las tarjetas
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.style.animation = 'none';
+                setTimeout(() => {
+                    card.style.animation = 'scaleIn 0.5s ease-out';
+                }, 10);
+            });
+        }
+
+        // Event Listeners
+        saveButton.addEventListener('click', saveList);
+        nextButton.addEventListener('click', showNextChallenge);
+
+        // Permitir guardar con Enter (Ctrl+Enter o Cmd+Enter)
+        studentListTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                saveList();
+            }
+        });
+
+        // Cargar lista guardada al iniciar
+        loadSavedList();
+    </script>
+</body>
+</html>
+
