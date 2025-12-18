@@ -233,6 +233,25 @@
             z-index: 100; /* siempre por encima de la cortina y la ruleta */
         }
 
+        .roulette-labels {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .roulette-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+        }
+
         .pointer {
             position: absolute;
             bottom: 0;
@@ -394,6 +413,10 @@
                         <div class="wheel-center"></div>
                     </div>
                     <div class="curtain" id="curtain">RESULTADO OCULTO</div>
+                </div>
+                <div class="roulette-labels">
+                    <span class="roulette-label">0%</span>
+                    <span class="roulette-label">100%</span>
                 </div>
                 <div class="pointer-wrapper" id="pointerWrapper">
                     <div class="pointer" id="pointer"></div>
