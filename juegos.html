@@ -3,546 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta de Puntuaciones</title>
+    <title>Ruleta Wavelength Ajustada</title>
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            --card-bg: rgba(10, 20, 40, 0.95);
-            --accent: #d4af37;
-            --accent-soft: rgba(212, 175, 55, 0.3);
-            --text-main: #f8f9ff;
-            --text-muted: #a4b0be;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+            --bg-color: #f0f2f5;
+            --base-color: #2c3e50;
+            --needle-color: #ff4757;
         }
 
         body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-gradient);
-            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-            color: var(--text-main);
-            padding: 20px;
-        }
-
-        .page-container {
-            width: 100%;
-            max-width: 900px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header-title {
-            font-size: 2.4rem;
-            letter-spacing: 3px;
-            font-weight: 700;
-            color: var(--accent);
-            text-shadow:
-                0 0 18px rgba(212, 175, 55, 0.6),
-                0 4px 10px rgba(0, 0, 0, 0.6);
-            margin-bottom: 8px;
-        }
-
-        .header-subtitle {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-        }
-
-        .game-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 25px 20px 20px;
-            box-shadow:
-                0 18px 40px rgba(0, 0, 0, 0.55),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
-            display: grid;
-            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-            gap: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .game-card {
-                grid-template-columns: 1fr;
-            }
-
-            .header-title {
-                font-size: 1.9rem;
-            }
-        }
-
-        /* Zona de la ruleta */
-        .roulette-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', sans-serif;
+            user-select: none;
+            touch-action: none;
         }
 
-        .roulette-container {
+        /* Contenedor principal reducido */
+        .game-container {
             position: relative;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #4b6584 0, #1e272e 45%, #000 100%);
-            box-shadow:
-                0 15px 30px rgba(0, 0, 0, 0.8),
-                0 0 0 4px rgba(255, 255, 255, 0.05),
-                0 0 0 10px rgba(212, 175, 55, 0.15);
+            width: 400px;
+            height: 400px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            overflow: hidden;
+            align-items: center;
         }
 
-        /* Aguja circular arrastrable */
+        /* Área de la ruleta reducida */
+        .game-view {
+            position: absolute;
+            top: 0;
+            width: 380px;
+            height: 190px;
+            overflow: hidden;
+            border-radius: 190px 190px 0 0;
+            background: #fff;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .wheel {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 360px;
+            height: 360px;
+            margin-left: -180px;
+            border-radius: 50%;
+            background: #eee;
+            transition: transform 2s cubic-bezier(0.15, 0, 0.15, 1);
+        }
+
+        .segment {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 30px;
+            height: 180px;
+            margin-left: -15px;
+            transform-origin: bottom center;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+            clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%);
+        }
+
+        .p1 { background: #f1c40f; }
+        .p3 { background: #e67e22; }
+        .p5 { background: #1abc9c; }
+
+        /* Tapa */
+        .cover {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--base-color);
+            z-index: 30;
+            border-radius: 190px 190px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1rem;
+            transition: transform 0.6s ease-in-out;
+            pointer-events: none;
+        }
+
+        .cover.hidden { transform: translateY(110%); }
+
+        /* Vara Roja 360 con seguimiento directo */
         .needle-wrapper {
             position: absolute;
             top: 50%;
             left: 50%;
             width: 0;
             height: 0;
-            transform: translate(-50%, -50%) rotate(0deg);
-            z-index: 6;
-            pointer-events: none; /* solo la aguja capta eventos */
+            z-index: 40;
+            transform: rotate(0deg);
         }
 
         .needle {
             position: absolute;
             bottom: 0;
-            left: -3px;
-            width: 6px;
-            height: 110px;
-            background: #ff4757;
-            border-radius: 999px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
-            transform-origin: bottom center;
+            left: -4px;
+            width: 8px;
+            height: 185px;
+            background: var(--needle-color);
+            border-radius: 4px;
             cursor: grab;
-            pointer-events: auto;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+            transform-origin: bottom center;
         }
 
         .needle::after {
             content: '';
             position: absolute;
-            bottom: -7px;
+            bottom: -8px;
             left: 50%;
             transform: translateX(-50%);
             width: 16px;
             height: 16px;
-            background: #ff4757;
+            background: var(--needle-color);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
         }
 
-        .wheel {
-            position: relative;
-            width: 82%;
-            height: 82%;
-            border-radius: 50%;
-            background: conic-gradient(
-                #f1c40f 0deg 72deg,
-                #e67e22 72deg 144deg,
-                #1abc9c 144deg 216deg,
-                #e67e22 216deg 288deg,
-                #f1c40f 288deg 360deg
-            );
+        .base-labels {
+            width: 380px;
+            background: var(--base-color);
+            color: white;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 2.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        .wheel-inner {
-            width: 58%;
-            height: 58%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 20%, #576574 0, #222f3e 45%, #000 100%);
-            box-shadow:
-                inset 0 0 18px rgba(0, 0, 0, 0.8),
-                0 0 0 2px rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .center-badge {
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 20% 20%, #f6e58d 0, #d4af37 45%, #825a12 100%);
-            box-shadow:
-                0 6px 14px rgba(0, 0, 0, 0.8),
-                0 0 0 2px rgba(255, 255, 255, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: #1b1b2f;
-            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
-        }
-
-        .segment-labels {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .segment-label {
-            position: absolute;
-            width: 40px;
-            text-align: center;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
-        }
-
-        .segment-label.s1 { transform: rotate(0deg) translateY(-90px); }
-        .segment-label.s3a { transform: rotate(72deg) translateY(-90px); }
-        .segment-label.s5 { transform: rotate(144deg) translateY(-90px); }
-        .segment-label.s3b { transform: rotate(216deg) translateY(-90px); }
-        .segment-label.s1b { transform: rotate(288deg) translateY(-90px); }
-
-        .pointer {
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 20px solid var(--accent);
-            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7));
-            z-index: 5;
-        }
-
-        /* Panel lateral de información y controles */
-        .side-panel {
-            display: flex;
-            flex-direction: column;
             justify-content: space-between;
+            padding: 8px 25px;
+            box-sizing: border-box;
+            border-radius: 0 0 8px 8px;
+            font-weight: bold;
+            z-index: 2;
         }
 
-        .info-block {
-            margin-bottom: 20px;
-        }
+        .controls { margin-top: 20px; }
 
-        .info-title {
-            font-size: 1rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--accent);
-            margin-bottom: 6px;
-        }
-
-        .info-text {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        .result-display {
-            margin-bottom: 18px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            background: rgba(15, 52, 96, 0.75);
-            border: 1px solid var(--accent-soft);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .result-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .result-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--accent);
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .btn {
-            flex: 1 1 140px;
-            padding: 10px 16px;
-            border-radius: 999px;
+        button {
+            padding: 10px 20px;
+            margin: 0 8px;
             border: none;
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: #ecf0f1;
+            border-radius: 6px;
+            background: #2980b9;
+            color: white;
             cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.2s ease;
+            font-size: 14px;
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #00cec9, #0984e3);
-        }
-
-        .btn:active {
-            transform: translateY(1px) scale(0.99);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: default;
-            box-shadow: none;
-        }
-
-        .legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 6px;
-        }
-
-        .legend-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-        }
-
-        .legend-color.v1 { background: #f1c40f; }
-        .legend-color.v3 { background: #e67e22; }
-        .legend-color.v5 { background: #1abc9c; }
     </style>
 </head>
 <body>
-    <div class="page-container">
-        <header class="header">
-            <div class="header-title">RULETA 1 · 3 · 5 · 3 · 1</div>
-            <p class="header-subtitle">
-                Gira la ruleta para obtener una puntuación aleatoria. Ideal para crear minijuegos, retos y dinámicas rápidas.
-            </p>
-        </header>
 
-        <section class="game-card">
-            <div class="roulette-wrapper">
-                <div class="roulette-container">
-                    <div class="pointer"></div>
-                    <div id="needleWrapper" class="needle-wrapper">
-                        <div id="needle" class="needle"></div>
-                    </div>
-                    <div id="wheel" class="wheel">
-                        <div class="segment-labels">
-                            <div class="segment-label s1">1</div>
-                            <div class="segment-label s3a">3</div>
-                            <div class="segment-label s5">5</div>
-                            <div class="segment-label s3b">3</div>
-                            <div class="segment-label s1b">1</div>
-                        </div>
-                        <div class="wheel-inner">
-                            <div class="center-badge" id="centerScore">?</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="game-container">
+        <div class="game-view">
+            <div id="cover" class="cover">MODO OCULTO</div>
+            <div id="wheel" class="wheel"></div>
+        </div>
 
-            <aside class="side-panel">
-                <div class="info-block">
-                    <div class="info-title">Cómo funciona</div>
-                    <p class="info-text">
-                        La ruleta está dividida en 5 sectores con las puntuaciones
-                        <strong>1, 3, 5, 3, 1</strong>. Cada giro se detiene en un sector aleatorio,
-                        y la punta dorada indica el resultado final.
-                    </p>
-                </div>
+        <div id="needleWrapper" class="needle-wrapper">
+            <div class="needle" id="needle"></div>
+        </div>
+    </div>
 
-                <div class="result-display">
-                    <div class="result-label">Puntuación actual</div>
-                    <div class="result-value" id="resultValue">–</div>
-                </div>
+    <div class="base-labels">
+        <span>0</span>
+        <span>100</span>
+    </div>
 
-                <div class="controls">
-                    <button id="spinBtn" class="btn btn-primary">
-                        Girar ruleta
-                    </button>
-                    <button id="resetBtn" class="btn">
-                        Reiniciar
-                    </button>
-                </div>
-
-                <div class="legend">
-                    <span class="legend-item">
-                        <span class="legend-color v1"></span> 1 punto
-                    </span>
-                    <span class="legend-item">
-                        <span class="legend-color v3"></span> 3 puntos
-                    </span>
-                    <span class="legend-item">
-                        <span class="legend-color v5"></span> 5 puntos
-                    </span>
-                </div>
-            </aside>
-        </section>
+    <div class="controls">
+        <button onclick="spin()">Girar Ruleta</button>
+        <button onclick="toggleCover()">Tapar / Ver</button>
     </div>
 
     <script>
-        // Valores de los 5 segmentos en orden (en el sentido de las agujas del reloj)
-        const segmentValues = [1, 3, 5, 3, 1];
-        const segmentAngle = 360 / segmentValues.length; // 72°
-
         const wheel = document.getElementById('wheel');
-        const centerScore = document.getElementById('centerScore');
-        const resultValue = document.getElementById('resultValue');
-        const spinBtn = document.getElementById('spinBtn');
-        const resetBtn = document.getElementById('resetBtn');
+        const cover = document.getElementById('cover');
         const needleWrapper = document.getElementById('needleWrapper');
         const needle = document.getElementById('needle');
-        const rouletteContainer = document.querySelector('.roulette-container');
-
         let currentRotation = 0;
-        let isSpinning = false;
-        let isDraggingNeedle = false;
-        let currentNeedleAngle = 0;
 
-        function spinRoulette() {
-            if (isSpinning) return;
-            isSpinning = true;
+        // Distribución simétrica (0° y 180°)
+        const scores = [
+            [-20, '1', 'p1'], [-10, '3', 'p3'], [0, '5', 'p5'], [10, '3', 'p3'], [20, '1', 'p1'],
+            [160, '1', 'p1'], [170, '3', 'p3'], [180, '5', 'p5'], [190, '3', 'p3'], [200, '1', 'p1']
+        ];
 
-            // Deshabilitar botón mientras gira
-            spinBtn.disabled = true;
+        scores.forEach(s => {
+            const seg = document.createElement('div');
+            seg.className = 'segment ' + s[2];
+            seg.style.transform = 'rotate(' + s[0] + 'deg)';
+            seg.innerText = s[1];
+            wheel.appendChild(seg);
+        });
 
-            // Elegimos un segmento objetivo al azar (0 a 4)
-            const randomIndex = Math.floor(Math.random() * segmentValues.length);
-
-            // Queremos que el "pico" superior (0°) coincida con el centro de ese segmento
-            const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
-
-            // Sumamos varias vueltas completas para una animación más vistosa
-            const extraTurns = 4 + Math.floor(Math.random() * 3); // entre 4 y 6 vueltas
-            const finalRotation = 360 * extraTurns + targetAngle;
-
-            currentRotation += finalRotation;
+        function spin() {
+            const randomExtra = Math.floor(Math.random() * 1000) + 720;
+            currentRotation += randomExtra;
             wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
-
-            const finalScore = segmentValues[randomIndex];
-
-            // Esperamos al final aproximado de la animación CSS para actualizar la puntuación
-            setTimeout(() => {
-                centerScore.textContent = finalScore;
-                resultValue.textContent = finalScore;
-                // Recolocamos la aguja apuntando hacia arriba tras el giro
-                currentNeedleAngle = 0;
-                needleWrapper.style.transform = 'translate(-50%, -50%) rotate(0deg)';
-                isSpinning = false;
-                spinBtn.disabled = false;
-            }, 2700); // ligeramente mayor que la duración de la transición (2.6s)
         }
 
-        function resetRoulette() {
-            if (isSpinning) return;
-
-            currentRotation = 0;
-            wheel.style.transform = 'rotate(0deg)';
-            centerScore.textContent = '?';
-            resultValue.textContent = '–';
-            currentNeedleAngle = 0;
-            needleWrapper.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+        function toggleCover() {
+            cover.classList.toggle('hidden');
         }
 
-        spinBtn.addEventListener('click', spinRoulette);
-        resetBtn.addEventListener('click', resetRoulette);
+        // Lógica corregida: Seguimiento directo del cursor
+        let isDragging = false;
 
-        // --- Lógica de arrastre manual de la aguja ---
-        function updateScoreFromNeedle(angleDeg) {
-            // Normalizamos ángulo a [0, 360)
-            let norm = ((angleDeg % 360) + 360) % 360;
+        const handleMove = (e) => {
+            if (!isDragging) return;
 
-            // CSS rota en sentido horario, pero nuestros segmentos están definidos
-            // en el mismo sentido, empezando en la parte superior.
-            const index = Math.floor(norm / segmentAngle) % segmentValues.length;
-            const value = segmentValues[index];
-
-            centerScore.textContent = value;
-            resultValue.textContent = value;
-        }
-
-        function handleNeedleMove(e) {
-            if (!isDraggingNeedle || isSpinning) return;
-
-            const rect = rouletteContainer.getBoundingClientRect();
+            const rect = document.querySelector('.game-container').getBoundingClientRect();
+            // El centro de rotación es el centro del contenedor (200, 200 en este caso)
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
+            // Calculamos el ángulo: Math.atan2(y, x)
+            // Restamos la posición del mouse de la posición del centro
             const deltaX = clientX - centerX;
             const deltaY = clientY - centerY;
 
+            // Calculamos grados y ajustamos el offset (90 grados) para que la vara
+            // apunte directamente hacia donde está el puntero.
             const radians = Math.atan2(deltaY, deltaX);
-            const degrees = radians * (180 / Math.PI) + 90; // offset para que 0° sea hacia arriba
+            const degrees = radians * (180 / Math.PI) + 90;
 
-            currentNeedleAngle = degrees;
-            needleWrapper.style.transform = 'translate(-50%, -50%) rotate(' + degrees + 'deg)';
-            updateScoreFromNeedle(degrees);
-        }
+            needleWrapper.style.transform = 'rotate(' + degrees + 'deg)';
+        };
 
-        needle.addEventListener('mousedown', () => {
-            if (isSpinning) return;
-            isDraggingNeedle = true;
-            needle.style.cursor = 'grabbing';
-        });
+        needle.addEventListener('mousedown', () => { isDragging = true; needle.style.cursor = 'grabbing'; });
+        needle.addEventListener('touchstart', (e) => { isDragging = true; e.preventDefault(); });
 
-        needle.addEventListener('touchstart', (e) => {
-            if (isSpinning) return;
-            isDraggingNeedle = true;
-            e.preventDefault();
-        }, { passive: false });
+        window.addEventListener('mouseup', () => { isDragging = false; needle.style.cursor = 'grab'; });
+        window.addEventListener('touchend', () => isDragging = false);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', handleMove, { passive: false });
 
-        window.addEventListener('mouseup', () => {
-            isDraggingNeedle = false;
-            needle.style.cursor = 'grab';
-        });
-
-        window.addEventListener('touchend', () => {
-            isDraggingNeedle = false;
-        });
-
-        window.addEventListener('mousemove', handleNeedleMove);
-        window.addEventListener('touchmove', handleNeedleMove, { passive: false });
     </script>
 </body>
 </html>
-
-
