@@ -178,6 +178,7 @@
             box-shadow:
                 0 18px 40px rgba(0, 0, 0, 0.8),
                 0 0 0 1px rgba(15, 23, 42, 0.8);
+            cursor: pointer; /* indicar que es interactiva */
         }
 
         .wheel {
@@ -220,18 +221,30 @@
                 0 6px 18px rgba(0, 0, 0, 0.9);
         }
 
+        .pointer-wrapper {
+            position: absolute;
+            /* Centro exacto del círculo: radio ~170px desde la parte superior */
+            top: 170px;
+            left: 50%;
+            transform: translateX(-50%) rotate(0deg);
+            transform-origin: center bottom;
+            width: 0;
+            height: 0;
+            z-index: 4;
+        }
+
         .pointer {
             position: absolute;
-            top: -5px;
+            bottom: 0;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 14px solid transparent;
-            border-right: 14px solid transparent;
-            border-bottom: 22px solid #fbbf24;
-            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7));
-            z-index: 4;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 28px solid #fbbf24;
+            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.8));
+            cursor: grab;
         }
 
         /* Cortina */
@@ -243,7 +256,7 @@
             width: 360px;
             height: 180px;
             border-radius: 180px 180px 0 0;
-            background: radial-gradient(circle at top, rgba(15, 23, 42, 0.96), rgba(0, 0, 0, 0.98));
+            background-color: #111827; /* totalmente opaco, sin transparencia */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -381,7 +394,9 @@
                     </div>
                     <div class="curtain" id="curtain">RESULTADO OCULTO</div>
                 </div>
-                <div class="pointer"></div>
+                <div class="pointer-wrapper" id="pointerWrapper">
+                    <div class="pointer" id="pointer"></div>
+                </div>
             </div>
 
             <div class="controls">
@@ -446,9 +461,39 @@
         const curtain = document.getElementById('curtain');
         const spinBtn = document.getElementById('spinBtn');
         const toggleCurtainBtn = document.getElementById('toggleCurtainBtn');
+        const pointerWrapper = document.getElementById('pointerWrapper');
+        const pointer = document.getElementById('pointer');
+        const rouletteView = document.querySelector('.roulette-view');
 
         let currentRotation = 0;
         let isSpinning = false;
+        let pointerAngle = 0;
+        let isDraggingPointer = false;
+
+        function setPointerAngle(deg) {
+            // Limitar entre -90° (izquierda) y 90° (derecha)
+            const clamped = Math.max(-90, Math.min(90, deg));
+            pointerAngle = clamped;
+            pointerWrapper.style.transform = 'translateX(-50%) rotate(' + clamped + 'deg)';
+        }
+
+        function updatePointerFromEvent(e) {
+            const rect = rouletteView.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            // Centro del círculo está unos px por debajo del borde inferior visible
+            const centerY = rect.top + 170; // coincide con top de pointer-wrapper
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - centerX;
+            const dy = centerY - clientY; // positivo hacia arriba
+
+            const radians = Math.atan2(dx, dy);
+            const degrees = radians * (180 / Math.PI); // 0° arriba, positivo hacia la derecha
+
+            setPointerAngle(degrees);
+        }
 
         function spinMysteryWheel() {
             if (isSpinning) return;
@@ -487,8 +532,55 @@
         spinBtn.addEventListener('click', spinMysteryWheel);
         toggleCurtainBtn.addEventListener('click', toggleCurtain);
 
+        // --- Interacción con la aguja ---
+        pointer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            pointer.style.cursor = 'grabbing';
+        });
+
+        rouletteView.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            pointer.style.cursor = 'grabbing';
+            updatePointerFromEvent(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingPointer) return;
+            updatePointerFromEvent(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isDraggingPointer) return;
+            isDraggingPointer = false;
+            pointer.style.cursor = 'grab';
+        });
+
+        // Soporte táctil
+        pointer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+        }, { passive: false });
+
+        rouletteView.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            updatePointerFromEvent(e);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDraggingPointer) return;
+            updatePointerFromEvent(e);
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            isDraggingPointer = false;
+        });
+
         // Al cargar la página, mostramos el alumno actual (sin avanzar)
         showCurrentStudent();
+        setPointerAngle(0);
     </script>
 </body>
 </html>
