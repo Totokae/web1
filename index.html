@@ -12,8 +12,8 @@
         }
 
         body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #1a0d00 0%, #0a0500 50%, #000000 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -21,52 +21,90 @@
             justify-content: center;
             padding: 40px 20px;
             color: #fff;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
             width: 100%;
-            max-width: 800px;
+            max-width: 1200px;
             text-align: center;
+            position: relative;
+            z-index: 1;
         }
 
         .title {
-            font-size: 72px;
-            font-weight: bold;
+            font-size: 64px;
+            font-weight: 800;
             color: #d4af37;
             text-shadow: 
-                0 0 20px rgba(212, 175, 55, 0.5),
-                0 4px 10px rgba(0, 0, 0, 0.5),
-                2px 2px 4px rgba(0, 0, 0, 0.8);
-            margin-bottom: 80px;
-            letter-spacing: 4px;
-            font-family: 'Georgia', serif;
-            animation: fadeInDown 0.8s ease-out;
+                0 0 30px rgba(212, 175, 55, 0.8),
+                0 0 60px rgba(212, 175, 55, 0.4),
+                0 4px 10px rgba(0, 0, 0, 0.8),
+                2px 2px 4px rgba(0, 0, 0, 0.9);
+            margin-bottom: 60px;
+            letter-spacing: 6px;
+            animation: fadeInDown 0.8s ease-out, glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 30px rgba(212, 175, 55, 0.8),
+                    0 0 60px rgba(212, 175, 55, 0.4),
+                    0 4px 10px rgba(0, 0, 0, 0.8);
+            }
+            to {
+                text-shadow: 
+                    0 0 40px rgba(212, 175, 55, 1),
+                    0 0 80px rgba(212, 175, 55, 0.6),
+                    0 4px 10px rgba(0, 0, 0, 0.8);
+            }
         }
 
         .navigation {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            align-items: stretch;
         }
 
         .nav-button {
-            width: 100%;
-            max-width: 500px;
-            padding: 25px 40px;
-            font-size: 24px;
-            font-weight: 600;
+            padding: 28px 24px;
+            font-size: 18px;
+            font-weight: 700;
             text-decoration: none;
             color: #fff;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            border: 2px solid rgba(212, 175, 55, 0.3);
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            display: block;
-            letter-spacing: 1px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 134, 11, 0.1) 100%);
+            border: 2px solid rgba(212, 175, 55, 0.4);
+            border-radius: 16px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.4),
+                0 0 20px rgba(212, 175, 55, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
             position: relative;
             overflow: hidden;
+            min-height: 100px;
+            backdrop-filter: blur(10px);
         }
 
         .nav-button::before {
@@ -76,8 +114,8 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
-            transition: left 0.5s;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+            transition: left 0.6s ease;
         }
 
         .nav-button:hover::before {
@@ -85,23 +123,53 @@
         }
 
         .nav-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            border-color: rgba(212, 175, 55, 0.6);
-            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 12px 30px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(212, 175, 55, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            border-color: rgba(212, 175, 55, 0.8);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(184, 134, 11, 0.2) 100%);
         }
 
         .nav-button:active {
-            transform: translateY(-2px);
+            transform: translateY(-4px) scale(0.98);
         }
 
         .nav-button.active {
-            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
-            color: #1a1a2e;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #d4af37 100%);
+            color: #1a0d00;
             border-color: #d4af37;
-            font-weight: bold;
+            font-weight: 800;
+            box-shadow: 
+                0 8px 25px rgba(212, 175, 55, 0.5),
+                0 0 50px rgba(212, 175, 55, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
+        .nav-button.active:hover {
+            background: linear-gradient(135deg, #f4d03f 0%, #d4af37 50%, #f4d03f 100%);
+            box-shadow: 
+                0 12px 35px rgba(212, 175, 55, 0.6),
+                0 0 60px rgba(212, 175, 55, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-button.coming-soon {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, rgba(55, 65, 81, 0.3) 0%, rgba(31, 41, 55, 0.2) 100%);
+            border-color: rgba(148, 163, 184, 0.3);
+            color: #9ca3af;
+        }
+
+        .nav-button.coming-soon:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.4),
+                0 0 20px rgba(148, 163, 184, 0.2);
+            border-color: rgba(148, 163, 184, 0.5);
+        }
 
         /* Animaciones */
         @keyframes fadeInDown {
@@ -119,21 +187,21 @@
             animation: fadeInUp 0.6s ease-out backwards;
         }
 
-        .nav-button:nth-child(1) {
-            animation-delay: 0.2s;
-        }
-
-        .nav-button:nth-child(2) {
-            animation-delay: 0.3s;
-        }
-
-        .nav-button:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        .nav-button:nth-child(4) {
-            animation-delay: 0.5s;
-        }
+        .nav-button:nth-child(1) { animation-delay: 0.1s; }
+        .nav-button:nth-child(2) { animation-delay: 0.15s; }
+        .nav-button:nth-child(3) { animation-delay: 0.2s; }
+        .nav-button:nth-child(4) { animation-delay: 0.25s; }
+        .nav-button:nth-child(5) { animation-delay: 0.3s; }
+        .nav-button:nth-child(6) { animation-delay: 0.35s; }
+        .nav-button:nth-child(7) { animation-delay: 0.4s; }
+        .nav-button:nth-child(8) { animation-delay: 0.45s; }
+        .nav-button:nth-child(9) { animation-delay: 0.5s; }
+        .nav-button:nth-child(10) { animation-delay: 0.55s; }
+        .nav-button:nth-child(11) { animation-delay: 0.6s; }
+        .nav-button:nth-child(12) { animation-delay: 0.65s; }
+        .nav-button:nth-child(13) { animation-delay: 0.7s; }
+        .nav-button:nth-child(14) { animation-delay: 0.75s; }
+        .nav-button:nth-child(15) { animation-delay: 0.8s; }
 
         @keyframes fadeInUp {
             from {
@@ -147,29 +215,42 @@
         }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            .navigation {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .title {
-                font-size: 48px;
-                margin-bottom: 50px;
-                letter-spacing: 2px;
+                font-size: 42px;
+                margin-bottom: 40px;
+                letter-spacing: 3px;
+            }
+
+            .navigation {
+                grid-template-columns: 1fr;
+                gap: 16px;
             }
 
             .nav-button {
-                font-size: 20px;
-                padding: 20px 30px;
+                font-size: 16px;
+                padding: 22px 20px;
+                min-height: 80px;
             }
         }
 
         @media (max-width: 480px) {
             .title {
-                font-size: 36px;
-                margin-bottom: 40px;
-                letter-spacing: 1px;
+                font-size: 32px;
+                margin-bottom: 30px;
+                letter-spacing: 2px;
             }
 
             .nav-button {
-                font-size: 18px;
-                padding: 18px 25px;
+                font-size: 14px;
+                padding: 18px 16px;
+                min-height: 70px;
             }
         }
     </style>
@@ -185,6 +266,15 @@
             <a href="ruleta-operaciones.html" class="nav-button active">RULETA DE OPERACIONES</a>
             <a href="juegos.html" class="nav-button active">JUEGOS</a>
             <a href="ruleta-misteriosa.html" class="nav-button active">RULETA MISTERIOSA</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 1</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 2</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 3</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 4</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 5</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 6</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 7</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 8</a>
+            <a href="#" class="nav-button coming-soon" onclick="event.preventDefault();">PRÓXIMAMENTE 9</a>
         </nav>
     </div>
 
