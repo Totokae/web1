@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Homotecia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #canvas-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="flex h-screen">
+        <!-- Sidebar Controls -->
+        <aside class="w-80 bg-gray-800 border-r border-gray-700 p-6 overflow-y-auto">
+            <h1 class="text-2xl font-bold mb-6 text-yellow-400">Simulador de Homotecia</h1>
+            
+            <!-- Scale Factor Slider -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-gray-300">
+                    Factor de Escala (k):
+                </label>
+                <input 
+                    type="range" 
+                    id="scaleFactor" 
+                    min="-3" 
+                    max="3" 
+                    step="0.1" 
+                    value="2"
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                >
+                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>-3</span>
+                    <span id="kValue" class="text-yellow-400 font-bold">2.0</span>
+                    <span>3</span>
+                </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="space-y-3 mb-6">
+                <button 
+                    id="addVertexBtn" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    ➕ Agregar Vértice
+                </button>
+                <button 
+                    id="resetBtn" 
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    🔄 Reiniciar
+                </button>
+                <button 
+                    id="toggleGridBtn" 
+                    class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    📐 Toggle Grid
+                </button>
+            </div>
+
+            <!-- Distance Ratio Table -->
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-3 text-yellow-400">Razón de Distancias</h2>
+                <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">|k| =</span>
+                            <span id="absK" class="text-yellow-400 font-bold">2.0</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-3">
+                            dist(O,P') / dist(O,P) = |k|
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="text-xs text-gray-400 space-y-2">
+                <p class="font-semibold text-gray-300 mb-2">Instrucciones:</p>
+                <p>• Arrastra el centro O (punto amarillo)</p>
+                <p>• Arrastra los vértices del polígono azul</p>
+                <p>• Usa el slider para cambiar k</p>
+                <p>• Líneas punteadas muestran la proyección</p>
+            </div>
+        </aside>
+
+        <!-- Main Canvas Area -->
+        <main class="flex-1 relative">
+            <div id="canvas-container"></div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================
+        // GLOBAL STATE & CONFIGURATION
+        // ============================================
+        let centerO = { x: 400, y: 300 }; // Center of dilation (draggable)
+        let preImage = []; // Array of pre-image vertices
+        let image = []; // Array of transformed image vertices
+        let scaleFactor = 2.0; // Current scale factor k
+        let isDraggingCenter = false;
+        let isDraggingVertex = -1; // Index of vertex being dragged, -1 if none
+        let showGrid = true;
+        let canvasWidth, canvasHeight;
+
+        // ============================================
+        // P5.JS SETUP & DRAW FUNCTIONS
+        // ============================================
+        function setup() {
+            const container = document.getElementById('canvas-container');
+            canvasWidth = windowWidth - 320; // Account for sidebar width
+            canvasHeight = windowHeight;
+            
+            const canvas = createCanvas(canvasWidth, canvasHeight);
+            canvas.parent('canvas-container');
+            
+            // Initialize with a triangle as default pre-image
+            preImage = [
+                { x: 200, y: 200 },
+                { x: 300, y: 150 },
+                { x: 250, y: 250 }
+            ];
+            
+            updateImage(); // Calculate initial image
+            
+            // Setup UI event listeners
+            setupUI();
+        }
+
+        function draw() {
+            background(17, 24, 39); // bg-gray-900 equivalent
+            
+            // Draw coordinate grid
+            if (showGrid) {
+                drawGrid();
+            }
+            
+            // Draw coordinate axes
+            drawAxes();
+            
+            // Draw projection lines (dashed) from center O through pre-image to image
+            drawProjectionLines();
+            
+            // Draw the pre-image polygon (blue)
+            drawPolygon(preImage, color(59, 130, 246), 'Pre-imagen');
+            
+            // Draw the transformed image polygon (red)
+            drawPolygon(image, color(239, 68, 68), 'Imagen');
+            
+            // Draw center of dilation (yellow, draggable)
+            drawCenter();
+            
+            // Draw vertices with labels
+            drawVertices();
+            
+            // Draw distance ratio info on canvas
+            drawDistanceInfo();
+        }
+
+        // ============================================
+        // DRAWING FUNCTIONS
+        // ============================================
+        
+        /**
+         * Draws the Cartesian coordinate grid
+         */
+        function drawGrid() {
+            stroke(55, 65, 81); // gray-700
+            strokeWeight(0.5);
+            
+            const gridSpacing = 50;
+            
+            // Vertical lines
+            for (let x = 0; x <= width; x += gridSpacing) {
+                line(x, 0, x, height);
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y <= height; y += gridSpacing) {
+                line(0, y, width, y);
+            }
+        }
+
+        /**
+         * Draws the coordinate axes (X and Y)
+         */
+        function drawAxes() {
+            stroke(156, 163, 175); // gray-400
+            strokeWeight(2);
+            
+            // X-axis
+            line(0, height / 2, width, height / 2);
+            
+            // Y-axis
+            line(width / 2, 0, width / 2, height);
+            
+            // Axis labels
+            fill(156, 163, 175);
+            noStroke();
+            textAlign(CENTER);
+            textSize(14);
+            text('X', width - 20, height / 2 - 10);
+            text('Y', width / 2 + 20, 20);
+            text('O', width / 2 + 15, height / 2 + 20);
+        }
+
+        /**
+         * Draws dashed projection lines from center O through pre-image vertices to image vertices
+         * This is crucial for visualizing the homothety transformation
+         */
+        function drawProjectionLines() {
+            stroke(250, 204, 21); // yellow-400
+            strokeWeight(1.5);
+            drawingContext.setLineDash([5, 5]); // Dashed line pattern
+            
+            for (let i = 0; i < preImage.length; i++) {
+                const P = preImage[i];
+                const P_prime = image[i];
+                
+                // Calculate direction vector from O to P
+                const dx = P.x - centerO.x;
+                const dy = P.y - centerO.y;
+                
+                // Extend line beyond both points for better visualization
+                const extend = 1000;
+                const startX = centerO.x - dx * extend;
+                const startY = centerO.y - dy * extend;
+                const endX = centerO.x + dx * extend;
+                const endY = centerO.y + dy * extend;
+                
+                line(startX, startY, endX, endY);
+            }
+            
+            drawingContext.setLineDash([]); // Reset to solid lines
+        }
+
+        /**
+         * Draws a polygon with the given vertices and color
+         * @param {Array} vertices - Array of {x, y} objects
+         * @param {p5.Color} fillColor - Color to fill the polygon
+         * @param {String} label - Label for the polygon
+         */
+        function drawPolygon(vertices, fillColor, label) {
+            if (vertices.length < 2) return;
+            
+            // Draw filled polygon
+            fill(red(fillColor), green(fillColor), blue(fillColor), 100);
+            stroke(red(fillColor), green(fillColor), blue(fillColor));
+            strokeWeight(2);
+            
+            beginShape();
+            for (let v of vertices) {
+                vertex(v.x, v.y);
+            }
+            endShape(CLOSE);
+        }
+
+        /**
+         * Draws the center of dilation (O) as a draggable yellow point
+         */
+        function drawCenter() {
+            // Draw center point
+            fill(250, 204, 21); // yellow-400
+            stroke(255);
+            strokeWeight(2);
+            circle(centerO.x, centerO.y, 12);
+            
+            // Label
+            fill(250, 204, 21);
+            noStroke();
+            textAlign(CENTER);
+            textSize(14);
+            text('O', centerO.x, centerO.y - 20);
+            text(`(${Math.round(centerO.x - width/2)}, ${Math.round(height/2 - centerO.y)})`, 
+                 centerO.x, centerO.y + 35);
+        }
+
+        /**
+         * Draws all vertices with their coordinate labels
+         */
+        function drawVertices() {
+            // Draw pre-image vertices (blue)
+            for (let i = 0; i < preImage.length; i++) {
+                const v = preImage[i];
+                fill(59, 130, 246); // blue-500
+                stroke(255);
+                strokeWeight(2);
+                circle(v.x, v.y, 10);
+                
+                // Label with coordinates
+                fill(59, 130, 246);
+                noStroke();
+                textAlign(LEFT);
+                textSize(12);
+                const screenX = Math.round(v.x - width/2);
+                const screenY = Math.round(height/2 - v.y);
+                text(`P${i} (${screenX}, ${screenY})`, v.x + 15, v.y - 5);
+            }
+            
+            // Draw image vertices (red)
+            for (let i = 0; i < image.length; i++) {
+                const v = image[i];
+                fill(239, 68, 68); // red-500
+                stroke(255);
+                strokeWeight(2);
+                circle(v.x, v.y, 10);
+                
+                // Label with coordinates
+                fill(239, 68, 68);
+                noStroke();
+                textAlign(LEFT);
+                textSize(12);
+                const screenX = Math.round(v.x - width/2);
+                const screenY = Math.round(height/2 - v.y);
+                text(`P'${i} (${screenX}, ${screenY})`, v.x + 15, v.y + 15);
+            }
+        }
+
+        /**
+         * Draws distance ratio information on the canvas
+         */
+        function drawDistanceInfo() {
+            if (preImage.length === 0) return;
+            
+            fill(255, 255, 255, 200);
+            noStroke();
+            textAlign(LEFT);
+            textSize(14);
+            
+            let infoY = 30;
+            text(`Fórmula: P' = O + k(P - O)`, 20, infoY);
+            infoY += 20;
+            text(`k = ${scaleFactor.toFixed(2)}`, 20, infoY);
+            
+            // Show distance ratio for first vertex as example
+            if (preImage.length > 0) {
+                const distOP = dist(centerO.x, centerO.y, preImage[0].x, preImage[0].y);
+                const distOPprime = dist(centerO.x, centerO.y, image[0].x, image[0].y);
+                const ratio = distOP > 0 ? (distOPprime / distOP).toFixed(2) : 'N/A';
+                infoY += 20;
+                text(`dist(O,P'₀) / dist(O,P₀) = ${ratio}`, 20, infoY);
+            }
+        }
+
+        // ============================================
+        // TRANSFORMATION LOGIC
+        // ============================================
+        
+        /**
+         * Calculates the transformed image using the homothety formula:
+         * P' = O + k(P - O)
+         * 
+         * This is the core mathematical transformation.
+         * Breaking it down:
+         * - (P - O) is the vector from center O to point P
+         * - k(P - O) scales this vector by factor k
+         * - O + k(P - O) translates the scaled vector from the origin back to O
+         * 
+         * For k > 1: expansion (image is larger)
+         * For 0 < k < 1: contraction (image is smaller)
+         * For k < 0: inversion + scaling (image is on opposite side of O)
+         * For k = 0: all points collapse to O
+         */
+        function updateImage() {
+            image = [];
+            
+            for (let i = 0; i < preImage.length; i++) {
+                const P = preImage[i];
+                
+                // Vector from center O to point P
+                const vectorOP = {
+                    x: P.x - centerO.x,
+                    y: P.y - centerO.y
+                };
+                
+                // Scale the vector by factor k
+                const scaledVector = {
+                    x: scaleFactor * vectorOP.x,
+                    y: scaleFactor * vectorOP.y
+                };
+                
+                // Translate from center O: P' = O + k(P - O)
+                const P_prime = {
+                    x: centerO.x + scaledVector.x,
+                    y: centerO.y + scaledVector.y
+                };
+                
+                image.push(P_prime);
+            }
+            
+            // Update UI display
+            updateUI();
+        }
+
+        // ============================================
+        // INTERACTION HANDLERS
+        // ============================================
+        
+        function mousePressed() {
+            // Check if clicking on center O
+            const distToCenter = dist(mouseX, mouseY, centerO.x, centerO.y);
+            if (distToCenter < 15) {
+                isDraggingCenter = true;
+                return;
+            }
+            
+            // Check if clicking on any pre-image vertex
+            for (let i = 0; i < preImage.length; i++) {
+                const v = preImage[i];
+                const distToVertex = dist(mouseX, mouseY, v.x, v.y);
+                if (distToVertex < 15) {
+                    isDraggingVertex = i;
+                    return;
+                }
+            }
+        }
+
+        function mouseDragged() {
+            if (isDraggingCenter) {
+                centerO.x = mouseX;
+                centerO.y = mouseY;
+                updateImage();
+            } else if (isDraggingVertex >= 0) {
+                preImage[isDraggingVertex].x = mouseX;
+                preImage[isDraggingVertex].y = mouseY;
+                updateImage();
+            }
+        }
+
+        function mouseReleased() {
+            isDraggingCenter = false;
+            isDraggingVertex = -1;
+        }
+
+        function windowResized() {
+            canvasWidth = windowWidth - 320;
+            canvasHeight = windowHeight;
+            resizeCanvas(canvasWidth, canvasHeight);
+        }
+
+        // ============================================
+        // UI CONTROL FUNCTIONS
+        // ============================================
+        
+        function setupUI() {
+            // Scale factor slider
+            const slider = document.getElementById('scaleFactor');
+            slider.addEventListener('input', (e) => {
+                scaleFactor = parseFloat(e.target.value);
+                updateImage();
+            });
+            
+            // Add vertex button
+            document.getElementById('addVertexBtn').addEventListener('click', () => {
+                // Add new vertex near the center of existing polygon
+                let avgX = 0, avgY = 0;
+                if (preImage.length > 0) {
+                    for (let v of preImage) {
+                        avgX += v.x;
+                        avgY += v.y;
+                    }
+                    avgX /= preImage.length;
+                    avgY /= preImage.length;
+                } else {
+                    avgX = width / 2;
+                    avgY = height / 2;
+                }
+                preImage.push({ x: avgX + 50, y: avgY + 50 });
+                updateImage();
+            });
+            
+            // Reset button
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                centerO = { x: width / 2, y: height / 2 };
+                preImage = [
+                    { x: 200, y: 200 },
+                    { x: 300, y: 150 },
+                    { x: 250, y: 250 }
+                ];
+                scaleFactor = 2.0;
+                slider.value = 2.0;
+                updateImage();
+            });
+            
+            // Toggle grid button
+            document.getElementById('toggleGridBtn').addEventListener('click', () => {
+                showGrid = !showGrid;
+            });
+        }
+
+        function updateUI() {
+            // Update k value display
+            document.getElementById('kValue').textContent = scaleFactor.toFixed(2);
+            document.getElementById('absK').textContent = Math.abs(scaleFactor).toFixed(2);
+        }
+    </script>
+</body>
+</html>
+
