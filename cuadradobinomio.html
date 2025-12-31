@@ -89,23 +89,12 @@
                             y={offsetY + scaledX / 2}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            fontSize="24"
+                            fontSize="28"
                             fontWeight="bold"
                             fill="#ffffff"
                             className="select-none"
                         >
-                            (C₁·x)²
-                        </text>
-                        <text
-                            x={offsetX + scaledX / 2}
-                            y={offsetY + scaledX / 2 + 30}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="18"
-                            fill="#ffffff"
-                            className="select-none"
-                        >
-                            {X.toFixed(2)}²
+                            {areaSquare1.toFixed(2)}
                         </text>
 
                         {/* Rectangle 1 (C1·x)(C2·y) - Yellow - Top */}
@@ -124,23 +113,12 @@
                             y={offsetY + scaledX / 2}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            fontSize="20"
+                            fontSize="24"
                             fontWeight="bold"
                             fill="#78350f"
                             className="select-none"
                         >
-                            (C₁·x)(C₂·y)
-                        </text>
-                        <text
-                            x={offsetX + scaledX + scaledY / 2}
-                            y={offsetY + scaledX / 2 + 25}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="16"
-                            fill="#78350f"
-                            className="select-none"
-                        >
-                            {X.toFixed(2)} × {Y.toFixed(2)}
+                            {areaRect1.toFixed(2)}
                         </text>
 
                         {/* Rectangle 2 (C1·x)(C2·y) - Yellow - Left */}
@@ -159,23 +137,12 @@
                             y={offsetY + scaledX + scaledY / 2}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            fontSize="20"
+                            fontSize="24"
                             fontWeight="bold"
                             fill="#78350f"
                             className="select-none"
                         >
-                            (C₁·x)(C₂·y)
-                        </text>
-                        <text
-                            x={offsetX + scaledX / 2}
-                            y={offsetY + scaledX + scaledY / 2 + 25}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="16"
-                            fill="#78350f"
-                            className="select-none"
-                        >
-                            {X.toFixed(2)} × {Y.toFixed(2)}
+                            {areaRect2.toFixed(2)}
                         </text>
 
                         {/* Small Square (C2·y)² - Blue */}
@@ -194,107 +161,13 @@
                             y={offsetY + scaledX + scaledY / 2}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            fontSize="24"
+                            fontSize="28"
                             fontWeight="bold"
                             fill="#ffffff"
                             className="select-none"
                         >
-                            (C₂·y)²
+                            {areaSquare2.toFixed(2)}
                         </text>
-                        <text
-                            x={offsetX + scaledX + scaledY / 2}
-                            y={offsetY + scaledX + scaledY / 2 + 30}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="18"
-                            fill="#ffffff"
-                            className="select-none"
-                        >
-                            {Y.toFixed(2)}²
-                        </text>
-
-                        {/* Dimension labels outside */}
-                        <g stroke="#6b7280" strokeWidth="2" fill="none">
-                            {/* Arrow for X dimension */}
-                            <line
-                                x1={offsetX}
-                                y1={offsetY - 20}
-                                x2={offsetX + scaledX}
-                                y2={offsetY - 20}
-                            />
-                            <polygon
-                                points={`${offsetX},${offsetY - 20} ${offsetX - 5},${offsetY - 25} ${offsetX - 5},${offsetY - 15}`}
-                                fill="#6b7280"
-                            />
-                            <polygon
-                                points={`${offsetX + scaledX},${offsetY - 20} ${offsetX + scaledX + 5},${offsetY - 25} ${offsetX + scaledX + 5},${offsetY - 15}`}
-                                fill="#6b7280"
-                            />
-                            <text
-                                x={offsetX + scaledX / 2}
-                                y={offsetY - 30}
-                                textAnchor="middle"
-                                fontSize="16"
-                                fill="#374151"
-                                fontWeight="bold"
-                            >
-                                C₁·x = {X.toFixed(2)}
-                            </text>
-
-                            {/* Arrow for Y dimension */}
-                            <line
-                                x1={offsetX + scaledX + 20}
-                                y1={offsetY}
-                                x2={offsetX + scaledX + 20}
-                                y2={offsetY + scaledX}
-                            />
-                            <polygon
-                                points={`${offsetX + scaledX + 20},${offsetY} ${offsetX + scaledX + 15},${offsetY - 5} ${offsetX + scaledX + 25},${offsetY - 5}`}
-                                fill="#6b7280"
-                            />
-                            <polygon
-                                points={`${offsetX + scaledX + 20},${offsetY + scaledX} ${offsetX + scaledX + 15},${offsetY + scaledX + 5} ${offsetX + scaledX + 25},${offsetY + scaledX + 5}`}
-                                fill="#6b7280"
-                            />
-                            <text
-                                x={offsetX + scaledX + 40}
-                                y={offsetY + scaledX / 2}
-                                textAnchor="middle"
-                                fontSize="16"
-                                fill="#374151"
-                                fontWeight="bold"
-                                transform={`rotate(90 ${offsetX + scaledX + 40} ${offsetY + scaledX / 2})`}
-                            >
-                                C₁·x = {X.toFixed(2)}
-                            </text>
-
-                            {/* Arrow for Y dimension (small square) */}
-                            <line
-                                x1={offsetX + scaledX + 20}
-                                y1={offsetY + scaledX}
-                                x2={offsetX + scaledX + 20}
-                                y2={offsetY + scaledTotal}
-                            />
-                            <polygon
-                                points={`${offsetX + scaledX + 20},${offsetY + scaledX} ${offsetX + scaledX + 15},${offsetY + scaledX - 5} ${offsetX + scaledX + 25},${offsetY + scaledX - 5}`}
-                                fill="#6b7280"
-                            />
-                            <polygon
-                                points={`${offsetX + scaledX + 20},${offsetY + scaledTotal} ${offsetX + scaledX + 15},${offsetY + scaledTotal + 5} ${offsetX + scaledX + 25},${offsetY + scaledTotal + 5}`}
-                                fill="#6b7280"
-                            />
-                            <text
-                                x={offsetX + scaledX + 40}
-                                y={offsetY + scaledX + scaledY / 2}
-                                textAnchor="middle"
-                                fontSize="16"
-                                fill="#374151"
-                                fontWeight="bold"
-                                transform={`rotate(90 ${offsetX + scaledX + 40} ${offsetY + scaledX + scaledY / 2})`}
-                            >
-                                C₂·y = {Y.toFixed(2)}
-                            </text>
-                        </g>
                     </svg>
                 </div>
             );
