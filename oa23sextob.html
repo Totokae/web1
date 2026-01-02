@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ley de los Grandes Números - Simulador de Dados</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @keyframes roll {
+            0% { transform: rotateX(0deg) rotateY(0deg); }
+            25% { transform: rotateX(90deg) rotateY(90deg); }
+            50% { transform: rotateX(180deg) rotateY(180deg); }
+            75% { transform: rotateX(270deg) rotateY(90deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg); }
+        }
+        
+        .dice-animation {
+            animation: roll 0.6s ease-out;
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease-out;
+        }
+
+        body {
+            background-color: #f5f1e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // Componente de dado animado
+        function Dice({ value, isRolling }) {
+            const diceFaces = {
+                1: (
+                    <div className="flex items-center justify-center w-full h-full">
+                        <div className="w-4 h-4 bg-gray-900 rounded-full"></div>
+                    </div>
+                ),
+                2: (
+                    <div className="flex justify-between items-start p-2 w-full h-full">
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full self-end"></div>
+                    </div>
+                ),
+                3: (
+                    <div className="flex justify-between items-start p-2 w-full h-full">
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full self-center"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full self-end"></div>
+                    </div>
+                ),
+                4: (
+                    <div className="grid grid-cols-2 gap-2 p-2 w-full h-full">
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                    </div>
+                ),
+                5: (
+                    <div className="grid grid-cols-3 gap-1 p-2 w-full h-full">
+                        <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-900 rounded-full col-start-2"></div>
+                    </div>
+                ),
+                6: (
+                    <div className="grid grid-cols-2 gap-2 p-2 w-full h-full">
+                        <div className="flex flex-col justify-between">
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        </div>
+                        <div className="flex flex-col justify-between">
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
+                        </div>
+                    </div>
+                )
+            };
+
+            return (
+                <div className={`w-20 h-20 bg-white rounded-lg shadow-lg border-2 border-gray-300 flex items-center justify-center ${isRolling ? 'dice-animation' : ''}`}>
+                    {diceFaces[value] || diceFaces[1]}
+                </div>
+            );
+        }
+
+        // Componente principal
+        function LeyGrandesNumeros() {
+            const [results, setResults] = useState([]);
+            const [frequencies, setFrequencies] = useState({});
+            const [totalRolls, setTotalRolls] = useState(0);
+            const [isRolling, setIsRolling] = useState(false);
+            const [lastValue, setLastValue] = useState(1);
+            const [relativeFrequencies, setRelativeFrequencies] = useState({});
+            const [evolutionData, setEvolutionData] = useState([]); // Para guardar evolución histórica
+            const chartRef = useRef(null);
+            const chartInstanceRef = useRef(null);
+
+            // Probabilidad teórica para un dado de 6 caras
+            const theoreticalProbability = 1 / 6;
+
+            // Inicializar frecuencias
+            useEffect(() => {
+                const initialFreq = {};
+                for (let i = 1; i <= 6; i++) {
+                    initialFreq[i] = 0;
+                }
+                setFrequencies(initialFreq);
+                setRelativeFrequencies(initialFreq);
+            }, []);
+
+            // Función para lanzar el dado
+            const rollDice = () => {
+                return Math.floor(Math.random() * 6) + 1;
+            };
+
+            // Función para simular múltiples lanzamientos
+            const simulateRolls = async (count) => {
+                setIsRolling(true);
+                const newResults = [];
+                const newFrequencies = { ...frequencies };
+                const newEvolutionData = [...evolutionData];
+                let currentTotal = totalRolls;
+                
+                // Simular lanzamientos con animación para pequeñas cantidades
+                if (count <= 10) {
+                    for (let i = 0; i < count; i++) {
+                        const value = rollDice();
+                        newResults.push(value);
+                        newFrequencies[value] = (newFrequencies[value] || 0) + 1;
+                        currentTotal++;
+                        setLastValue(value);
+                        
+                        // Calcular frecuencias relativas actuales
+                        const currentRelFreq = {};
+                        for (let j = 1; j <= 6; j++) {
+                            currentRelFreq[j] = newFrequencies[j] / currentTotal;
+                        }
+                        
+                        // Guardar punto de evolución (muestrear cada lanzamiento para pocos)
+                        newEvolutionData.push({
+                            n: currentTotal,
+                            frequencies: { ...currentRelFreq }
+                        });
+                        
+                        setFrequencies({ ...newFrequencies });
+                        setTotalRolls(currentTotal);
+                        setEvolutionData([...newEvolutionData]);
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                } else {
+                    // Para grandes cantidades, simular en lotes y muestrear
+                    const sampleInterval = Math.max(1, Math.floor(count / 100)); // Muestrear ~100 puntos
+                    for (let i = 0; i < count; i++) {
+                        const value = rollDice();
+                        newResults.push(value);
+                        newFrequencies[value] = (newFrequencies[value] || 0) + 1;
+                        currentTotal++;
+                        
+                        // Muestrear puntos para el gráfico de evolución
+                        if (i % sampleInterval === 0 || i === count - 1) {
+                            const currentRelFreq = {};
+                            for (let j = 1; j <= 6; j++) {
+                                currentRelFreq[j] = newFrequencies[j] / currentTotal;
+                            }
+                            newEvolutionData.push({
+                                n: currentTotal,
+                                frequencies: { ...currentRelFreq }
+                            });
+                        }
+                    }
+                    const lastValue = newResults[newResults.length - 1];
+                    setLastValue(lastValue);
+                    setTotalRolls(currentTotal);
+                    setFrequencies(newFrequencies);
+                    setEvolutionData(newEvolutionData);
+                }
+
+                setResults(prev => [...prev, ...newResults]);
+                setIsRolling(false);
+            };
+
+            // Calcular frecuencias relativas cuando cambian las frecuencias o total de lanzamientos
+            useEffect(() => {
+                if (totalRolls > 0) {
+                    const relFreq = {};
+                    for (let i = 1; i <= 6; i++) {
+                        relFreq[i] = frequencies[i] / totalRolls;
+                    }
+                    setRelativeFrequencies(relFreq);
+                }
+            }, [frequencies, totalRolls]);
+
+            // Actualizar gráfico cuando cambian los datos
+            useEffect(() => {
+                if (chartRef.current && evolutionData.length > 0) {
+                    const ctx = chartRef.current.getContext('2d');
+                    
+                    if (chartInstanceRef.current) {
+                        chartInstanceRef.current.destroy();
+                    }
+
+                    // Preparar datos para el gráfico de evolución
+                    const labels = evolutionData.map(d => d.n);
+                    const colors = [
+                        'rgba(59, 130, 246, 1)',   // Azul
+                        'rgba(16, 185, 129, 1)',   // Verde
+                        'rgba(245, 101, 101, 1)',  // Rojo
+                        'rgba(251, 191, 36, 1)',   // Amarillo
+                        'rgba(139, 92, 246, 1)',   // Púrpura
+                        'rgba(236, 72, 153, 1)'    // Rosa
+                    ];
+                    
+                    const backgroundColorColors = [
+                        'rgba(59, 130, 246, 0.1)',
+                        'rgba(16, 185, 129, 0.1)',
+                        'rgba(245, 101, 101, 0.1)',
+                        'rgba(251, 191, 36, 0.1)',
+                        'rgba(139, 92, 246, 0.1)',
+                        'rgba(236, 72, 153, 0.1)'
+                    ];
+
+                    const datasets = [];
+                    
+                    // Crear una línea para cada cara del dado
+                    for (let face = 1; face <= 6; face++) {
+                        const dataPoints = evolutionData.map(d => d.frequencies[face] || 0);
+                        datasets.push({
+                            label: `Cara ${face}`,
+                            data: dataPoints,
+                            borderColor: colors[face - 1],
+                            backgroundColor: backgroundColorColors[face - 1],
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            borderWidth: 2
+                        });
+                    }
+
+                    // Línea de probabilidad teórica
+                    datasets.push({
+                        label: 'Probabilidad Teórica (1/6 ≈ 16.67%)',
+                        data: evolutionData.map(() => theoreticalProbability),
+                        borderColor: 'rgb(0, 0, 0)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0
+                    });
+
+                    chartInstanceRef.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        boxWidth: 12,
+                                        padding: 8,
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.parsed.y;
+                                            return `${context.dataset.label}: ${(value * 100).toFixed(2)}%`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 1,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return (value * 100).toFixed(0) + '%';
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Frecuencia Relativa'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Número de Lanzamientos (n)'
+                                    },
+                                    ticks: {
+                                        maxTicksLimit: 20
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartInstanceRef.current) {
+                        chartInstanceRef.current.destroy();
+                    }
+                };
+            }, [evolutionData, theoreticalProbability]);
+
+            // Calcular porcentaje de progreso para la barra de progreso (basado en lanzamientos)
+            const progressPercentage = useMemo(() => {
+                const maxRolls = 1000;
+                return Math.min((totalRolls / maxRolls) * 100, 100);
+            }, [totalRolls]);
+
+            // Función para resetear
+            const reset = () => {
+                setResults([]);
+                const initialFreq = {};
+                for (let i = 1; i <= 6; i++) {
+                    initialFreq[i] = 0;
+                }
+                setFrequencies(initialFreq);
+                setRelativeFrequencies(initialFreq);
+                setTotalRolls(0);
+                setLastValue(1);
+                setEvolutionData([]);
+                if (chartInstanceRef.current) {
+                    chartInstanceRef.current.destroy();
+                    chartInstanceRef.current = null;
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-amber-50 py-8 px-4">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Título */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-amber-900 mb-2">
+                                Ley de los Grandes Números
+                            </h1>
+                            <p className="text-lg text-amber-800">
+                                Observa cómo las frecuencias relativas se acercan a la probabilidad teórica
+                            </p>
+                        </div>
+
+                        {/* Zona de Regulación - Barra de Progreso */}
+                        <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-amber-900">Progreso de la Simulación</span>
+                                <span className="text-sm text-amber-700">{totalRolls} lanzamientos</span>
+                            </div>
+                            <div className="w-full bg-amber-200 rounded-full h-4 overflow-hidden">
+                                <div 
+                                    className="progress-bar bg-amber-600 h-4 rounded-full transition-all duration-300"
+                                    style={{ width: `${progressPercentage}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* Registro Pictórico - Dado Animado */}
+                        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                Registro Pictórico
+                            </h2>
+                            <div className="flex justify-center">
+                                <Dice value={lastValue} isRolling={isRolling} />
+                            </div>
+                            <p className="text-center mt-4 text-amber-800">
+                                Último resultado: <span className="font-bold text-xl">{lastValue}</span>
+                            </p>
+                        </div>
+
+                        {/* Controles - Simulador */}
+                        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                Simulador de Dados
+                            </h2>
+                            <div className="flex flex-wrap justify-center gap-4">
+                                <button
+                                    onClick={() => simulateRolls(1)}
+                                    disabled={isRolling}
+                                    className="px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Lanzar 1 vez
+                                </button>
+                                <button
+                                    onClick={() => simulateRolls(10)}
+                                    disabled={isRolling}
+                                    className="px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Lanzar 10 veces
+                                </button>
+                                <button
+                                    onClick={() => simulateRolls(1000)}
+                                    disabled={isRolling}
+                                    className="px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Lanzar 1,000 veces
+                                </button>
+                                <button
+                                    onClick={reset}
+                                    disabled={isRolling}
+                                    className="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Reiniciar
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Registro Tabular */}
+                        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                Registro Tabular
+                            </h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-amber-100">
+                                            <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                Cara del Dado
+                                            </th>
+                                            <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                Frecuencia Absoluta
+                                            </th>
+                                            <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                Frecuencia Relativa
+                                            </th>
+                                            <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                Probabilidad Teórica
+                                            </th>
+                                            <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                Diferencia
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[1, 2, 3, 4, 5, 6].map(face => {
+                                            const absFreq = frequencies[face] || 0;
+                                            const relFreq = relativeFrequencies[face] || 0;
+                                            const diff = Math.abs(relFreq - theoreticalProbability);
+                                            return (
+                                                <tr key={face} className="hover:bg-amber-50">
+                                                    <td className="border border-amber-300 px-4 py-3 font-medium text-amber-900">
+                                                        {face}
+                                                    </td>
+                                                    <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                        {absFreq}
+                                                    </td>
+                                                    <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                        {totalRolls > 0 ? (relFreq * 100).toFixed(2) + '%' : '0.00%'}
+                                                    </td>
+                                                    <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                        {(theoreticalProbability * 100).toFixed(2)}%
+                                                    </td>
+                                                    <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                        {totalRolls > 0 ? (diff * 100).toFixed(2) + '%' : '0.00%'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="bg-amber-100 font-semibold">
+                                            <td className="border border-amber-300 px-4 py-3 text-amber-900">Total</td>
+                                            <td className="border border-amber-300 px-4 py-3 text-amber-900">{totalRolls}</td>
+                                            <td className="border border-amber-300 px-4 py-3 text-amber-900">100.00%</td>
+                                            <td className="border border-amber-300 px-4 py-3 text-amber-900">100.00%</td>
+                                            <td className="border border-amber-300 px-4 py-3 text-amber-900">-</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Registro Gráfico */}
+                        <div className="bg-white rounded-lg shadow-md p-6">
+                            <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                Registro Gráfico
+                            </h2>
+                            <div className="h-96">
+                                <canvas ref={chartRef}></canvas>
+                            </div>
+                            <p className="text-center mt-4 text-sm text-amber-700">
+                                Cada línea de color muestra la evolución de la frecuencia relativa de una cara del dado.
+                                La línea negra punteada muestra la probabilidad teórica (1/6 ≈ 16.67%).
+                                Observa cómo todas las líneas se acercan a la línea negra cuando aumenta el número de lanzamientos (n).
+                                Este es el principio de la Ley de los Grandes Números: el "caos" inicial se vuelve "orden" con muestras grandes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Renderizar la aplicación
+        ReactDOM.render(<LeyGrandesNumeros />, document.getElementById('root'));
+    </script>
+</body>
+</html>

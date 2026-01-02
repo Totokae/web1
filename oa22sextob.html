@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Exploratorio de Datos - Comparación de Grupos</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Lexend', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: 0.01em;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .sticker {
+            cursor: move;
+            user-select: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .sticker:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .sticker.dragging {
+            opacity: 0.7;
+            z-index: 1000;
+        }
+
+        .number-line {
+            position: relative;
+            background: linear-gradient(to right, #ffffff 0%, #e8f4f8 100%);
+            border: 3px solid #34495e;
+            border-radius: 8px;
+        }
+
+        .stem-leaf-cell {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stem-leaf-cell:hover {
+            background-color: #ecf0f1;
+        }
+
+        .stem-highlighted {
+            background-color: #f39c12 !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            transform: scale(1.1);
+        }
+
+        .leaf-highlighted {
+            background-color: #e74c3c !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            transform: scale(1.15);
+        }
+
+        .overlay-group {
+            opacity: 0.7;
+            mix-blend-mode: multiply;
+        }
+
+        .high-contrast {
+            color: #1a1a1a;
+            background-color: #ffffff;
+        }
+
+        .accessibility-button {
+            background-color: #3498db;
+            color: #ffffff;
+            border: 2px solid #2980b9;
+            font-weight: bold;
+        }
+
+        .accessibility-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // Función auxiliar para generar diagrama de tallo y hojas
+        function generateStemLeaf(data) {
+            const stemLeafMap = {};
+            data.forEach(num => {
+                const stem = Math.floor(num / 10);
+                const leaf = num % 10;
+                if (!stemLeafMap[stem]) {
+                    stemLeafMap[stem] = [];
+                }
+                stemLeafMap[stem].push(leaf);
+            });
+
+            // Ordenar las hojas en cada tallo
+            Object.keys(stemLeafMap).forEach(stem => {
+                stemLeafMap[stem].sort((a, b) => a - b);
+            });
+
+            return stemLeafMap;
+        }
+
+        // Componente de Diagrama de Puntos
+        function DotPlot({ data, groupName, color, onUpdate, minValue = 0, maxValue = 100 }) {
+            const lineRef = useRef(null);
+            const [draggedSticker, setDraggedSticker] = useState(null);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+            const lineHeight = 60;
+            const padding = 40;
+            const lineWidth = 600;
+
+            // Convertir valor a posición X en la línea
+            const valueToX = (value) => {
+                return padding + ((value - minValue) / (maxValue - minValue)) * lineWidth;
+            };
+
+            // Convertir posición X a valor
+            const xToValue = (x) => {
+                const relativeX = x - padding;
+                const value = minValue + (relativeX / lineWidth) * (maxValue - minValue);
+                return Math.max(minValue, Math.min(maxValue, Math.round(value)));
+            };
+
+            const handleMouseDown = (e, index) => {
+                e.preventDefault();
+                if (!lineRef.current) return;
+                
+                setDraggedSticker(index);
+                setDragOffset({
+                    x: 0,
+                    y: 0
+                });
+            };
+
+            const handleMouseMove = (e) => {
+                if (draggedSticker === null || lineRef.current === null) return;
+                
+                const rect = lineRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const newValue = xToValue(x);
+                
+                const newData = [...data];
+                newData[draggedSticker] = newValue;
+                onUpdate(newData);
+            };
+
+            const handleMouseUp = () => {
+                setDraggedSticker(null);
+            };
+
+            useEffect(() => {
+            if (draggedSticker !== null) {
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                return () => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                };
+            }
+            }, [draggedSticker, dragOffset]);
+
+            return (
+                <div className="mb-6">
+                    <h3 className="text-xl font-bold mb-3" style={{ color: color }}>
+                        {groupName} - Diagrama de Puntos
+                    </h3>
+                    <div className="bg-white rounded-lg shadow-lg p-4 border-2" style={{ borderColor: color }}>
+                        <svg
+                            ref={lineRef}
+                            width={lineWidth + padding * 2}
+                            height={lineHeight + 40}
+                            className="number-line"
+                        >
+                            {/* Línea numérica */}
+                            <line
+                                x1={padding}
+                                y1={lineHeight / 2}
+                                x2={lineWidth + padding}
+                                y2={lineHeight / 2}
+                                stroke="#34495e"
+                                strokeWidth="3"
+                            />
+
+                            {/* Marcas en la línea */}
+                            {Array.from({ length: 11 }, (_, i) => {
+                                const value = minValue + (i * (maxValue - minValue) / 10);
+                                const x = valueToX(value);
+                                return (
+                                    <g key={i}>
+                                        <line
+                                            x1={x}
+                                            y1={lineHeight / 2 - 10}
+                                            x2={x}
+                                            y2={lineHeight / 2 + 10}
+                                            stroke="#34495e"
+                                            strokeWidth="2"
+                                        />
+                                        <text
+                                            x={x}
+                                            y={lineHeight / 2 + 30}
+                                            textAnchor="middle"
+                                            fontSize="14"
+                                            fontWeight="bold"
+                                            fill="#2c3e50"
+                                        >
+                                            {value}
+                                        </text>
+                                    </g>
+                                );
+                            })}
+
+                            {/* Puntos (stickers) */}
+                            {data.map((value, index) => {
+                                const x = valueToX(value);
+                                // Calcular posición en la pila para valores duplicados
+                                const sameValueIndices = data
+                                    .map((v, i) => v === value ? i : -1)
+                                    .filter(i => i !== -1)
+                                    .sort((a, b) => a - b);
+                                const positionInStack = sameValueIndices.indexOf(index);
+                                const y = lineHeight / 2 - (positionInStack * 15) - 10;
+                                
+                                return (
+                                    <circle
+                                        key={`${index}-${value}`}
+                                        cx={x}
+                                        cy={y}
+                                        r="8"
+                                        fill={color}
+                                        stroke="#ffffff"
+                                        strokeWidth="2"
+                                        className={`sticker ${draggedSticker === index ? 'dragging' : ''}`}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleMouseDown(e, index);
+                                        }}
+                                        style={{ cursor: 'move' }}
+                                    />
+                                );
+                            })}
+                        </svg>
+                        <div className="mt-2 text-sm text-gray-600">
+                            Datos: {data.length} estudiantes | Arrastra los puntos para modificar los valores
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Componente de Diagrama de Tallo y Hojas
+        function StemLeafPlot({ data, groupName, color, highlightedNumber = null, onNumberClick }) {
+            const stemLeafMap = useMemo(() => generateStemLeaf(data), [data]);
+
+            const minStem = Math.min(...Object.keys(stemLeafMap).map(Number));
+            const maxStem = Math.max(...Object.keys(stemLeafMap).map(Number));
+
+            const handleCellClick = (stem, leaf) => {
+                const number = stem * 10 + leaf;
+                if (onNumberClick) {
+                    onNumberClick(number);
+                }
+            };
+
+            return (
+                <div className="mb-6">
+                    <h3 className="text-xl font-bold mb-3" style={{ color: color }}>
+                        {groupName} - Diagrama de Tallo y Hojas
+                    </h3>
+                    <div className="bg-white rounded-lg shadow-lg p-4 border-2" style={{ borderColor: color }}>
+                        <div className="flex items-start gap-4">
+                            <div className="flex flex-col">
+                                <div className="text-sm font-bold mb-2 px-2">Tallo</div>
+                                {Array.from({ length: maxStem - minStem + 1 }, (_, i) => {
+                                    const stem = minStem + i;
+                                    const isHighlighted = highlightedNumber !== null && 
+                                                          Math.floor(highlightedNumber / 10) === stem;
+                                    return (
+                                        <div
+                                            key={stem}
+                                            className={`stem-leaf-cell px-3 py-2 text-center font-bold border-r-2 ${isHighlighted ? 'stem-highlighted' : ''}`}
+                                            style={{ borderColor: color }}
+                                        >
+                                            {stem}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-sm font-bold mb-2 px-2">Hojas</div>
+                                {Array.from({ length: maxStem - minStem + 1 }, (_, i) => {
+                                    const stem = minStem + i;
+                                    const leaves = stemLeafMap[stem] || [];
+                                    return (
+                                        <div
+                                            key={stem}
+                                            className="stem-leaf-cell px-2 py-2 min-h-[40px] flex flex-wrap gap-1"
+                                        >
+                                            {leaves.map((leaf, idx) => {
+                                                const number = stem * 10 + leaf;
+                                                const isHighlighted = highlightedNumber === number;
+                                                return (
+                                                    <span
+                                                        key={idx}
+                                                        className={`inline-block px-2 py-1 rounded text-center font-bold ${isHighlighted ? 'leaf-highlighted' : ''}`}
+                                                        style={{
+                                                            backgroundColor: isHighlighted ? '#e74c3c' : color,
+                                                            color: isHighlighted ? '#ffffff' : '#ffffff',
+                                                            opacity: isHighlighted ? 1 : 0.8,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCellClick(stem, leaf);
+                                                        }}
+                                                    >
+                                                        {leaf}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+                            <strong>Fórmula:</strong> x = 10t + h, donde t es el tallo y h es la hoja.
+                            {highlightedNumber !== null && (
+                                <div className="mt-2 font-bold" style={{ color: '#e74c3c' }}>
+                                    Número seleccionado: {highlightedNumber} = 10 × {Math.floor(highlightedNumber / 10)} + {highlightedNumber % 10}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Componente de Comparación Visual
+        function ComparisonView({ groupA, groupB, colorA, colorB }) {
+            const stemLeafA = useMemo(() => generateStemLeaf(groupA), [groupA]);
+            const stemLeafB = useMemo(() => generateStemLeaf(groupB), [groupB]);
+
+            const allStems = new Set([
+                ...Object.keys(stemLeafA).map(Number),
+                ...Object.keys(stemLeafB).map(Number)
+            ]);
+            const minStem = Math.min(...allStems);
+            const maxStem = Math.max(...allStems);
+
+            return (
+                <div className="mb-6">
+                    <h3 className="text-2xl font-bold mb-4 text-center">Comparación Visual - Superposición</h3>
+                    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gray-400">
+                        <div className="grid grid-cols-2 gap-6">
+                            {/* Grupo A */}
+                            <div className="relative">
+                                <h4 className="text-lg font-bold mb-3" style={{ color: colorA }}>
+                                    Grupo A
+                                </h4>
+                                {Array.from({ length: maxStem - minStem + 1 }, (_, i) => {
+                                    const stem = minStem + i;
+                                    const leaves = stemLeafA[stem] || [];
+                                    return (
+                                        <div key={stem} className="flex items-center mb-2">
+                                            <div className="w-12 text-center font-bold border-r-2 pr-2" style={{ borderColor: colorA }}>
+                                                {stem}
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 ml-2">
+                                                {leaves.map((leaf, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        className="inline-block px-2 py-1 rounded text-xs font-bold text-white"
+                                                        style={{ backgroundColor: colorA, opacity: 0.8 }}
+                                                    >
+                                                        {leaf}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Grupo B */}
+                            <div className="relative">
+                                <h4 className="text-lg font-bold mb-3" style={{ color: colorB }}>
+                                    Grupo B
+                                </h4>
+                                {Array.from({ length: maxStem - minStem + 1 }, (_, i) => {
+                                    const stem = minStem + i;
+                                    const leaves = stemLeafB[stem] || [];
+                                    return (
+                                        <div key={stem} className="flex items-center mb-2">
+                                            <div className="w-12 text-center font-bold border-r-2 pr-2" style={{ borderColor: colorB }}>
+                                                {stem}
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 ml-2">
+                                                {leaves.map((leaf, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        className="inline-block px-2 py-1 rounded text-xs font-bold text-white"
+                                                        style={{ backgroundColor: colorB, opacity: 0.8 }}
+                                                    >
+                                                        {leaf}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Vista Superpuesta */}
+                        <div className="mt-6 pt-6 border-t-2 border-gray-300">
+                            <h4 className="text-lg font-bold mb-3 text-center">Vista Superpuesta</h4>
+                            <div className="relative">
+                                {Array.from({ length: maxStem - minStem + 1 }, (_, i) => {
+                                    const stem = minStem + i;
+                                    const leavesA = stemLeafA[stem] || [];
+                                    const leavesB = stemLeafB[stem] || [];
+                                    
+                                    return (
+                                        <div key={stem} className="flex items-center mb-2">
+                                            <div className="w-12 text-center font-bold border-r-2 pr-2 border-gray-400">
+                                                {stem}
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 ml-2 relative" style={{ minHeight: '30px' }}>
+                                                {/* Hojas del Grupo A (debajo) */}
+                                                <div className="absolute inset-0 flex flex-wrap gap-1">
+                                                    {leavesA.map((leaf, idx) => (
+                                                        <span
+                                                            key={`a-${idx}`}
+                                                            className="inline-block px-2 py-1 rounded text-xs font-bold text-white overlay-group"
+                                                            style={{ backgroundColor: colorA }}
+                                                        >
+                                                            {leaf}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                {/* Hojas del Grupo B (encima) */}
+                                                <div className="absolute inset-0 flex flex-wrap gap-1" style={{ paddingLeft: `${leavesA.length * 30}px` }}>
+                                                    {leavesB.map((leaf, idx) => (
+                                                        <span
+                                                            key={`b-${idx}`}
+                                                            className="inline-block px-2 py-1 rounded text-xs font-bold text-white overlay-group"
+                                                            style={{ backgroundColor: colorB }}
+                                                        >
+                                                            {leaf}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-4 flex justify-center gap-6 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded" style={{ backgroundColor: colorA, opacity: 0.7 }}></div>
+                                    <span>Grupo A</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded" style={{ backgroundColor: colorB, opacity: 0.7 }}></div>
+                                    <span>Grupo B</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Función para calcular estadísticas
+        function calculateStats(data) {
+            const sorted = [...data].sort((a, b) => a - b);
+            const sum = data.reduce((a, b) => a + b, 0);
+            const mean = sum / data.length;
+            const median = sorted.length % 2 === 0
+                ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                : sorted[Math.floor(sorted.length / 2)];
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            
+            return { mean, median, min, max };
+        }
+
+        // Componente principal
+        function EDATool() {
+            // Generar datos iniciales con mejor distribución
+            const generateInitialData = () => {
+                return Array(20).fill(0).map(() => {
+                    // Generar valores entre 20 y 70 para mejor visualización
+                    return Math.floor(Math.random() * 51) + 20;
+                });
+            };
+
+            const [groupA, setGroupA] = useState(generateInitialData());
+            const [groupB, setGroupB] = useState(generateInitialData());
+            const [highlightedNumber, setHighlightedNumber] = useState(null);
+            const [selectedGroup, setSelectedGroup] = useState(null);
+            const [showComparison, setShowComparison] = useState(false);
+
+            const colorA = '#2980b9'; // Azul (contraste alto, no saturado)
+            const colorB = '#c0392b'; // Rojo (contraste alto, no saturado)
+
+            const statsA = useMemo(() => calculateStats(groupA), [groupA]);
+            const statsB = useMemo(() => calculateStats(groupB), [groupB]);
+
+
+            const handleReset = () => {
+                setGroupA(generateInitialData());
+                setGroupB(generateInitialData());
+                setHighlightedNumber(null);
+                setSelectedGroup(null);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 py-8 px-4">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Título y Controles */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold mb-4" style={{ color: '#2c3e50' }}>
+                                Análisis Exploratorio de Datos (EDA)
+                            </h1>
+                            <p className="text-lg text-gray-700 mb-4">
+                                Herramienta Interactiva para Comparar Dos Grupos de Estudiantes
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={handleReset}
+                                    className="px-6 py-3 bg-gray-600 text-white font-bold rounded-lg shadow-md hover:bg-gray-700 transition-colors"
+                                >
+                                    Generar Nuevos Datos
+                                </button>
+                                <button
+                                    onClick={() => setShowComparison(!showComparison)}
+                                    className="px-6 py-3 accessibility-button rounded-lg shadow-md transition-colors"
+                                >
+                                    {showComparison ? 'Ocultar' : 'Mostrar'} Comparación
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Grupo A */}
+                        <div className="mb-8">
+                            <div className="mb-4 p-4 bg-blue-50 rounded-lg border-2" style={{ borderColor: colorA }}>
+                                <h3 className="text-lg font-bold mb-2" style={{ color: colorA }}>Grupo A - Estadísticas</h3>
+                                <div className="grid grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="font-semibold">Promedio:</span> {statsA.mean.toFixed(2)}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Mediana:</span> {statsA.median.toFixed(2)}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Mínimo:</span> {statsA.min}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Máximo:</span> {statsA.max}
+                                    </div>
+                                </div>
+                            </div>
+                            <DotPlot
+                                data={groupA}
+                                groupName="Grupo A"
+                                color={colorA}
+                                onUpdate={(newData) => {
+                                    setGroupA(newData);
+                                }}
+                            />
+                            <StemLeafPlot
+                                data={groupA}
+                                groupName="Grupo A"
+                                color={colorA}
+                                highlightedNumber={selectedGroup === 'A' ? highlightedNumber : null}
+                                onNumberClick={(num) => {
+                                    setHighlightedNumber(num);
+                                    setSelectedGroup('A');
+                                }}
+                            />
+                        </div>
+
+                        {/* Grupo B */}
+                        <div className="mb-8">
+                            <div className="mb-4 p-4 bg-red-50 rounded-lg border-2" style={{ borderColor: colorB }}>
+                                <h3 className="text-lg font-bold mb-2" style={{ color: colorB }}>Grupo B - Estadísticas</h3>
+                                <div className="grid grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="font-semibold">Promedio:</span> {statsB.mean.toFixed(2)}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Mediana:</span> {statsB.median.toFixed(2)}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Mínimo:</span> {statsB.min}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Máximo:</span> {statsB.max}
+                                    </div>
+                                </div>
+                            </div>
+                            <DotPlot
+                                data={groupB}
+                                groupName="Grupo B"
+                                color={colorB}
+                                onUpdate={(newData) => {
+                                    setGroupB(newData);
+                                }}
+                            />
+                            <StemLeafPlot
+                                data={groupB}
+                                groupName="Grupo B"
+                                color={colorB}
+                                highlightedNumber={selectedGroup === 'B' ? highlightedNumber : null}
+                                onNumberClick={(num) => {
+                                    setHighlightedNumber(num);
+                                    setSelectedGroup('B');
+                                }}
+                            />
+                        </div>
+
+                        {/* Comparación Visual */}
+                        {showComparison && (
+                            <ComparisonView
+                                groupA={groupA}
+                                groupB={groupB}
+                                colorA={colorA}
+                                colorB={colorB}
+                            />
+                        )}
+
+                        {/* Instrucciones */}
+                        <div className="mt-8 bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+                            <h3 className="text-xl font-bold mb-3" style={{ color: '#2980b9' }}>
+                                Instrucciones de Uso
+                            </h3>
+                            <ul className="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Diagrama de Puntos:</strong> Arrastra los puntos (stickers) sobre la recta numérica para modificar los valores.</li>
+                                <li><strong>Diagrama de Tallo y Hojas:</strong> Se genera automáticamente a partir del diagrama de puntos.</li>
+                                <li><strong>Descomposición:</strong> Haz clic en cualquier número en el diagrama de tallo y hojas para ver cómo se descompone usando la fórmula x = 10t + h.</li>
+                                <li><strong>Comparación:</strong> Usa el botón "Mostrar Comparación" para superponer las distribuciones de ambos grupos.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Renderizar la aplicación
+        ReactDOM.render(<EDATool />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+
