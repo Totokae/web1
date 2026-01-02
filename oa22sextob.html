@@ -124,10 +124,8 @@
             const onUpdateRef = useRef(onUpdate);
             
             // Actualizar refs cuando cambian los props
-            useEffect(() => {
-                dataRef.current = data;
-                onUpdateRef.current = onUpdate;
-            }, [data, onUpdate]);
+            dataRef.current = data;
+            onUpdateRef.current = onUpdate;
 
             const lineHeight = 60; // Altura base de la línea
             const padding = 40;
@@ -616,7 +614,7 @@
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div>
                                     <h3 className="text-xl font-bold mb-3" style={{ color: colorA }}>
-                                        {groupName} - Diagrama de Puntos
+                                        Grupo A - Diagrama de Puntos
                                     </h3>
                                     <DotPlot
                                         data={groupA}
@@ -664,7 +662,7 @@
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div>
                                     <h3 className="text-xl font-bold mb-3" style={{ color: colorB }}>
-                                        {groupName} - Diagrama de Puntos
+                                        Grupo B - Diagrama de Puntos
                                     </h3>
                                     <DotPlot
                                         data={groupB}
