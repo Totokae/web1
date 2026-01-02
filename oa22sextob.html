@@ -184,10 +184,6 @@
                 if (!lineRef.current) return;
                 
                 setDraggedSticker(index);
-                setDragOffset({
-                    x: 0,
-                    y: 0
-                });
             };
 
             useEffect(() => {
@@ -735,15 +731,7 @@
         }
 
         // Renderizar la aplicación
-        const rootElement = document.getElementById('root');
-        if (ReactDOM.createRoot) {
-            // React 18
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(<EDATool />);
-        } else {
-            // React 17 o anterior
-            ReactDOM.render(<EDATool />, rootElement);
-        }
+        ReactDOM.render(<EDATool />, document.getElementById('root'));
     </script>
 </body>
 </html>
