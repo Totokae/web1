@@ -79,7 +79,8 @@
             color, 
             index,
             onHandleDrag,
-            isDraggingHandle
+            isDraggingHandle,
+            showPercentages = true
         }) {
             const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
             
@@ -175,7 +176,7 @@
                     />
 
                     {/* Texto con porcentaje y fracción */}
-                    {sectorRange > 15 && (
+                    {sectorRange > 15 && showPercentages && (
                         <text
                             x={textX}
                             y={textY}
@@ -204,6 +205,7 @@
             const [initialPercentages, setInitialPercentages] = useState([25, 25, 25, 25]);
             const [prediction, setPrediction] = useState({});
             const [showValidation, setShowValidation] = useState(false);
+            const [showPercentages, setShowPercentages] = useState(true);
             
             const svgRef = useRef(null);
             const radius = 200;
@@ -410,6 +412,7 @@
                                                 index={idx}
                                                 onHandleDrag={handleDragStart}
                                                 isDraggingHandle={draggingHandle}
+                                                showPercentages={showPercentages}
                                             />
                                         ))}
                                     </svg>
@@ -420,12 +423,20 @@
                                     Al aumentar un sector, los otros se ajustan automáticamente.
                                 </p>
 
-                                <button
-                                    onClick={resetChart}
-                                    className="w-full px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition-colors"
-                                >
-                                    Reiniciar a 25% cada sector
-                                </button>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowPercentages(!showPercentages)}
+                                        className="flex-1 px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 transition-colors"
+                                    >
+                                        {showPercentages ? 'Ocultar' : 'Mostrar'} Porcentajes
+                                    </button>
+                                    <button
+                                        onClick={resetChart}
+                                        className="flex-1 px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition-colors"
+                                    >
+                                        Reiniciar a 25%
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Panel derecho: Información y Predicción */}
@@ -572,16 +583,76 @@
                         </div>
 
                         {/* Información Educativa */}
-                        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-                            <h3 className="text-xl font-semibold text-amber-900 mb-3">
-                                Conceptos Clave
-                            </h3>
-                            <ul className="list-disc list-inside space-y-2 text-amber-800">
-                                <li><strong>Sistema Cerrado:</strong> El total siempre suma 100% (360°). Al aumentar una categoría, las otras deben disminuir.</li>
-                                <li><strong>Relación Parte-Todo:</strong> Cada sector representa una parte del todo. La fracción muestra la relación matemática.</li>
-                                <li><strong>Competencia de Categorías:</strong> En un sistema cerrado, las categorías compiten por el espacio disponible.</li>
-                                <li><strong>Representación Equivalente:</strong> Porcentaje, fracción y ángulo son diferentes formas de expresar la misma cantidad.</li>
-                            </ul>
+                        <div className="mt-8 space-y-6">
+                            <div className="bg-white rounded-lg shadow-md p-6">
+                                <h3 className="text-xl font-semibold text-amber-900 mb-3">
+                                    Conceptos Clave
+                                </h3>
+                                <ul className="list-disc list-inside space-y-2 text-amber-800 mb-4">
+                                    <li><strong>Sistema Cerrado:</strong> El total siempre suma 100% (360°). Al aumentar una categoría, las otras deben disminuir.</li>
+                                    <li><strong>Relación Parte-Todo:</strong> Cada sector representa una parte del todo. La fracción muestra la relación matemática.</li>
+                                    <li><strong>Competencia de Categorías:</strong> En un sistema cerrado, las categorías compiten por el espacio disponible.</li>
+                                    <li><strong>Representación Equivalente:</strong> Porcentaje, fracción y ángulo son diferentes formas de expresar la misma cantidad.</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-md p-6">
+                                <h3 className="text-xl font-semibold text-amber-900 mb-3">
+                                    Actividades de Aprendizaje
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                        <h4 className="font-bold text-amber-900 mb-2">🎯 Actividad 1: Predicción Visual</h4>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            1. <strong>Oculta los porcentajes</strong> usando el botón.
+                                        </p>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            2. Observa el tamaño visual de cada sector.
+                                        </p>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            3. Predice el porcentaje de cada categoría.
+                                        </p>
+                                        <p className="text-sm text-amber-800">
+                                            4. Muestra los porcentajes y valida tu predicción.
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                        <h4 className="font-bold text-amber-900 mb-2">🔍 Actividad 2: Exploración Proporcional</h4>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            1. Modifica un sector para que sea exactamente <strong>50%</strong>.
+                                        </p>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            2. Observa cómo los otros tres sectores se redistribuyen.
+                                        </p>
+                                        <p className="text-sm text-amber-800">
+                                            3. ¿Qué fracción representa 50%? ¿Y el ángulo en grados?
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                        <h4 className="font-bold text-amber-900 mb-2">🧮 Actividad 3: Conversión de Representaciones</h4>
+                                        <p className="text-sm text-amber-800 mb-2">
+                                            Observa cómo el mismo valor se expresa como:
+                                        </p>
+                                        <ul className="list-disc list-inside text-sm text-amber-800 ml-2">
+                                            <li>Porcentaje: 25%</li>
+                                            <li>Fracción: 1/4</li>
+                                            <li>Ángulo: 90°</li>
+                                        </ul>
+                                        <p className="text-sm text-amber-800 mt-2">
+                                            ¿Puedes explicar por qué 25% = 1/4 = 90°/360°?
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                        <h4 className="font-bold text-amber-900 mb-2">💡 Reflexión</h4>
+                                        <p className="text-sm text-amber-800">
+                                            <strong>Pregunta:</strong> ¿Por qué es importante entender que en un gráfico circular el total siempre es 100%?
+                                        </p>
+                                        <p className="text-sm text-amber-800 mt-2">
+                                            <strong>Piensa en:</strong> Si una categoría crece, ¿qué debe pasar con las demás? ¿Por qué?
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

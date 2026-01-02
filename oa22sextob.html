@@ -122,9 +122,10 @@
             const [draggedSticker, setDraggedSticker] = useState(null);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-            const lineHeight = 60;
+            const lineHeight = 120; // Aumentado para más espacio vertical
             const padding = 40;
             const lineWidth = 600;
+            const stackSpacing = 20; // Espacio entre puntos apilados
 
             // Convertir valor a posición X en la línea
             const valueToX = (value) => {
@@ -136,6 +137,43 @@
                 const relativeX = x - padding;
                 const value = minValue + (relativeX / lineWidth) * (maxValue - minValue);
                 return Math.max(minValue, Math.min(maxValue, Math.round(value)));
+            };
+
+            // Calcular posiciones apiladas para puntos con el mismo valor
+            const getStackedPositions = (data) => {
+                const valueGroups = {};
+                data.forEach((value, index) => {
+                    if (!valueGroups[value]) {
+                        valueGroups[value] = [];
+                    }
+                    valueGroups[value].push(index);
+                });
+
+                const positions = {};
+                Object.keys(valueGroups).forEach(value => {
+                    const indices = valueGroups[value];
+                    const count = indices.length;
+                    const centerY = lineHeight / 2;
+                    
+                    indices.forEach((index, pos) => {
+                        // Alternar entre arriba y abajo de la línea
+                        if (count === 1) {
+                            positions[index] = { x: valueToX(parseFloat(value)), y: centerY, stackIndex: 0 };
+                        } else {
+                            const halfStack = Math.floor(count / 2);
+                            const offset = pos < halfStack 
+                                ? -(halfStack - pos) * stackSpacing  // Arriba
+                                : (pos - halfStack + (count % 2 === 0 ? 1 : 0)) * stackSpacing; // Abajo
+                            positions[index] = { 
+                                x: valueToX(parseFloat(value)), 
+                                y: centerY + offset, 
+                                stackIndex: pos 
+                            };
+                        }
+                    });
+                });
+
+                return positions;
             };
 
             const handleMouseDown = (e, index) => {
@@ -185,7 +223,7 @@
                         <svg
                             ref={lineRef}
                             width={lineWidth + padding * 2}
-                            height={lineHeight + 40}
+                            height={lineHeight + 60}
                             className="number-line"
                         >
                             {/* Línea numérica */}
@@ -227,34 +265,31 @@
                             })}
 
                             {/* Puntos (stickers) */}
-                            {data.map((value, index) => {
-                                const x = valueToX(value);
-                                // Calcular posición en la pila para valores duplicados
-                                const sameValueIndices = data
-                                    .map((v, i) => v === value ? i : -1)
-                                    .filter(i => i !== -1)
-                                    .sort((a, b) => a - b);
-                                const positionInStack = sameValueIndices.indexOf(index);
-                                const y = lineHeight / 2 - (positionInStack * 15) - 10;
-                                
-                                return (
-                                    <circle
-                                        key={`${index}-${value}`}
-                                        cx={x}
-                                        cy={y}
-                                        r="8"
-                                        fill={color}
-                                        stroke="#ffffff"
-                                        strokeWidth="2"
-                                        className={`sticker ${draggedSticker === index ? 'dragging' : ''}`}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            handleMouseDown(e, index);
-                                        }}
-                                        style={{ cursor: 'move' }}
-                                    />
-                                );
-                            })}
+                            {(() => {
+                                const stackedPositions = getStackedPositions(data);
+                                return data.map((value, index) => {
+                                    const position = stackedPositions[index];
+                                    if (!position) return null;
+                                    
+                                    return (
+                                        <circle
+                                            key={`${index}-${value}`}
+                                            cx={position.x}
+                                            cy={position.y}
+                                            r="8"
+                                            fill={color}
+                                            stroke="#ffffff"
+                                            strokeWidth="2"
+                                            className={`sticker ${draggedSticker === index ? 'dragging' : ''}`}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                handleMouseDown(e, index);
+                                            }}
+                                            style={{ cursor: 'move' }}
+                                        />
+                                    );
+                                }).filter(Boolean);
+                            })()}
                         </svg>
                         <div className="mt-2 text-sm text-gray-600">
                             Datos: {data.length} estudiantes | Arrastra los puntos para modificar los valores
@@ -652,12 +687,25 @@
                             <h3 className="text-xl font-bold mb-3" style={{ color: '#2980b9' }}>
                                 Instrucciones de Uso
                             </h3>
-                            <ul className="list-disc list-inside space-y-2 text-gray-700">
+                            <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
                                 <li><strong>Diagrama de Puntos:</strong> Arrastra los puntos (stickers) sobre la recta numérica para modificar los valores.</li>
                                 <li><strong>Diagrama de Tallo y Hojas:</strong> Se genera automáticamente a partir del diagrama de puntos.</li>
                                 <li><strong>Descomposición:</strong> Haz clic en cualquier número en el diagrama de tallo y hojas para ver cómo se descompone usando la fórmula x = 10t + h.</li>
                                 <li><strong>Comparación:</strong> Usa el botón "Mostrar Comparación" para superponer las distribuciones de ambos grupos.</li>
                             </ul>
+                            
+                            <div className="mt-4 p-4 bg-white rounded-lg border-2 border-blue-400">
+                                <h4 className="font-bold mb-2" style={{ color: '#2980b9' }}>Actividad Reflexiva:</h4>
+                                <p className="text-gray-700 text-sm mb-2">
+                                    <strong>Pregunta:</strong> ¿Qué observas cuando cambias los valores en el diagrama de puntos? ¿Cómo se relacionan los cambios con el diagrama de tallo y hojas?
+                                </p>
+                                <p className="text-gray-700 text-sm mb-2">
+                                    <strong>Explora:</strong> Intenta hacer que un grupo tenga valores más concentrados y el otro más dispersos. ¿Qué diferencias notas en las estadísticas?
+                                </p>
+                                <p className="text-gray-700 text-sm">
+                                    <strong>Conecta:</strong> Observa cómo el promedio y la mediana cambian cuando modificas los datos. ¿Cuándo son iguales? ¿Cuándo difieren?
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

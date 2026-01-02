@@ -506,12 +506,51 @@
                             <div className="h-96">
                                 <canvas ref={chartRef}></canvas>
                             </div>
-                            <p className="text-center mt-4 text-sm text-amber-700">
+                            <p className="text-center mt-4 text-sm text-amber-700 mb-4">
                                 Cada línea de color muestra la evolución de la frecuencia relativa de una cara del dado.
                                 La línea negra punteada muestra la probabilidad teórica (1/6 ≈ 16.67%).
                                 Observa cómo todas las líneas se acercan a la línea negra cuando aumenta el número de lanzamientos (n).
                                 Este es el principio de la Ley de los Grandes Números: el "caos" inicial se vuelve "orden" con muestras grandes.
                             </p>
+                        </div>
+
+                        {/* Sección Didáctica */}
+                        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+                            <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                Reflexión sobre la Ley de los Grandes Números
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                    <h3 className="font-bold text-amber-900 mb-2">📊 Observación</h3>
+                                    <p className="text-sm text-amber-800">
+                                        <strong>Pregunta:</strong> ¿Qué notas en los primeros 10 lanzamientos? ¿Y en los 1,000?
+                                    </p>
+                                    <p className="text-sm text-amber-800 mt-2">
+                                        <strong>Actividad:</strong> Observa cómo las frecuencias relativas varían mucho al inicio pero se estabilizan con más lanzamientos.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                    <h3 className="font-bold text-amber-900 mb-2">🧮 Concepto Clave</h3>
+                                    <p className="text-sm text-amber-800">
+                                        <strong>Ley de los Grandes Números:</strong> A medida que el número de experimentos (n) aumenta, la frecuencia relativa de un evento se acerca a su probabilidad teórica.
+                                    </p>
+                                    <p className="text-sm text-amber-800 mt-2">
+                                        Esto explica por qué un dado "justo" tiende a mostrar cada cara aproximadamente 1/6 de las veces en muestras grandes.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                    <h3 className="font-bold text-amber-900 mb-2">💡 Aplicación Real</h3>
+                                    <p className="text-sm text-amber-800">
+                                        Esta ley es fundamental en estadística, encuestas, control de calidad y análisis de datos. Nos permite predecir resultados a largo plazo aunque haya variabilidad a corto plazo.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-amber-50 rounded-lg border-2 border-amber-200">
+                                    <h3 className="font-bold text-amber-900 mb-2">🔍 Experimenta</h3>
+                                    <p className="text-sm text-amber-800">
+                                        <strong>Prueba esto:</strong> Lanza el dado 1 vez varias veces seguidas. Observa las variaciones. Luego lanza 1,000 veces y compara cómo las frecuencias se estabilizan cerca del 16.67%.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
