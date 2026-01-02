@@ -130,8 +130,9 @@
             const lineHeight = 60; // Altura base de la línea
             const padding = 40;
             const lineWidth = 600;
-            const stackSpacing = 12; // Espacio entre puntos apilados (reducido para menor dispersión)
-            const maxStackHeight = 180; // Altura máxima para apilamiento (reducido)
+            const stackSpacing = 16; // Espacio entre puntos apilados (aumentado para evitar sobreposición)
+            const maxStackHeight = 200; // Altura máxima para apilamiento
+            const pointRadius = 7; // Radio de los puntos (reducido para evitar sobreposición)
 
             // Convertir valor a posición X en la línea
             const valueToX = (value) => {
@@ -276,16 +277,16 @@
                                             key={`${index}-${value}`}
                                             cx={position.x}
                                             cy={position.y}
-                                            r="10"
+                                            r={pointRadius}
                                             fill={color}
                                             stroke="#ffffff"
-                                            strokeWidth="3"
+                                            strokeWidth="2"
                                             className={`sticker ${draggedSticker === index ? 'dragging' : ''}`}
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 handleMouseDown(e, index);
                                             }}
-                                            style={{ cursor: 'move', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                                            style={{ cursor: 'move', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))' }}
                                         />
                                     );
                                 }).filter(Boolean);
