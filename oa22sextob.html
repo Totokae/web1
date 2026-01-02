@@ -120,7 +120,14 @@
         function DotPlot({ data, groupName, color, onUpdate, minValue = 0, maxValue = 100 }) {
             const lineRef = useRef(null);
             const [draggedSticker, setDraggedSticker] = useState(null);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const dataRef = useRef(data);
+            const onUpdateRef = useRef(onUpdate);
+            
+            // Actualizar refs cuando cambian los props
+            useEffect(() => {
+                dataRef.current = data;
+                onUpdateRef.current = onUpdate;
+            }, [data, onUpdate]);
 
             const lineHeight = 60; // Altura base de la línea
             const padding = 40;
@@ -183,32 +190,35 @@
                 });
             };
 
-            const handleMouseMove = (e) => {
-                if (draggedSticker === null || lineRef.current === null) return;
-                
-                const rect = lineRef.current.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const newValue = xToValue(x);
-                
-                const newData = [...data];
-                newData[draggedSticker] = newValue;
-                onUpdate(newData);
-            };
-
-            const handleMouseUp = () => {
-                setDraggedSticker(null);
-            };
-
             useEffect(() => {
-            if (draggedSticker !== null) {
+                if (draggedSticker === null) return;
+
+                const handleMouseMove = (e) => {
+                    if (lineRef.current === null) return;
+                    
+                    const rect = lineRef.current.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const relativeX = x - padding;
+                    const value = minValue + (relativeX / lineWidth) * (maxValue - minValue);
+                    const newValue = Math.max(minValue, Math.min(maxValue, Math.round(value)));
+                    
+                    const currentData = [...dataRef.current];
+                    currentData[draggedSticker] = newValue;
+                    onUpdateRef.current(currentData);
+                };
+
+                const handleMouseUp = () => {
+                    setDraggedSticker(null);
+                };
+
                 document.addEventListener('mousemove', handleMouseMove);
                 document.addEventListener('mouseup', handleMouseUp);
+                
                 return () => {
                     document.removeEventListener('mousemove', handleMouseMove);
                     document.removeEventListener('mouseup', handleMouseUp);
                 };
-            }
-            }, [draggedSticker, dragOffset]);
+            }, [draggedSticker, padding, lineWidth, minValue, maxValue]);
 
             return (
                 <div className="mb-6">
@@ -725,7 +735,15 @@
         }
 
         // Renderizar la aplicación
-        ReactDOM.render(<EDATool />, document.getElementById('root'));
+        const rootElement = document.getElementById('root');
+        if (ReactDOM.createRoot) {
+            // React 18
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<EDATool />);
+        } else {
+            // React 17 o anterior
+            ReactDOM.render(<EDATool />, rootElement);
+        }
     </script>
 </body>
 </html>
