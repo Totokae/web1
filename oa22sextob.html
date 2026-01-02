@@ -29,19 +29,19 @@
         }
 
         .sticker:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: scale(1.15);
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)) brightness(1.1);
         }
 
         .sticker.dragging {
-            opacity: 0.7;
+            opacity: 0.9;
             z-index: 1000;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
         }
 
         .number-line {
             position: relative;
-            background: linear-gradient(to right, #ffffff 0%, #e8f4f8 100%);
-            border: 3px solid #34495e;
+            background: #ffffff;
             border-radius: 8px;
         }
 
@@ -130,8 +130,8 @@
             const lineHeight = 60; // Altura base de la línea
             const padding = 40;
             const lineWidth = 600;
-            const stackSpacing = 18; // Espacio entre puntos apilados
-            const maxStackHeight = 200; // Altura máxima para apilamiento
+            const stackSpacing = 12; // Espacio entre puntos apilados (reducido para menor dispersión)
+            const maxStackHeight = 180; // Altura máxima para apilamiento (reducido)
 
             // Convertir valor a posición X en la línea
             const valueToX = (value) => {
@@ -217,12 +217,14 @@
             return (
                 <div className="mb-6">
                     <div className="bg-white rounded-lg shadow-lg p-4 border-2" style={{ borderColor: color }}>
-                        <svg
-                            ref={lineRef}
-                            width={lineWidth + padding * 2}
-                            height={maxStackHeight + 60}
-                            className="number-line"
-                        >
+                        <div className="bg-white rounded p-2" style={{ border: '1px solid #e5e7eb' }}>
+                            <svg
+                                ref={lineRef}
+                                width={lineWidth + padding * 2}
+                                height={maxStackHeight + 60}
+                                className="number-line"
+                                style={{ backgroundColor: '#ffffff' }}
+                            >
                             {/* Línea numérica */}
                             <line
                                 x1={padding}
@@ -274,22 +276,23 @@
                                             key={`${index}-${value}`}
                                             cx={position.x}
                                             cy={position.y}
-                                            r="8"
+                                            r="10"
                                             fill={color}
                                             stroke="#ffffff"
-                                            strokeWidth="2"
+                                            strokeWidth="3"
                                             className={`sticker ${draggedSticker === index ? 'dragging' : ''}`}
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 handleMouseDown(e, index);
                                             }}
-                                            style={{ cursor: 'move' }}
+                                            style={{ cursor: 'move', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
                                         />
                                     );
                                 }).filter(Boolean);
                             })()}
-                        </svg>
-                        <div className="mt-2 text-sm text-gray-600">
+                            </svg>
+                        </div>
+                        <div className="mt-3 text-sm text-gray-600">
                             Datos: {data.length} estudiantes | Arrastra los puntos para modificar los valores
                         </div>
                     </div>
