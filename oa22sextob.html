@@ -122,10 +122,11 @@
             const [draggedSticker, setDraggedSticker] = useState(null);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-            const lineHeight = 120; // Aumentado para más espacio vertical
+            const lineHeight = 60; // Altura base de la línea
             const padding = 40;
             const lineWidth = 600;
-            const stackSpacing = 20; // Espacio entre puntos apilados
+            const stackSpacing = 18; // Espacio entre puntos apilados
+            const maxStackHeight = 200; // Altura máxima para apilamiento
 
             // Convertir valor a posición X en la línea
             const valueToX = (value) => {
@@ -140,6 +141,7 @@
             };
 
             // Calcular posiciones apiladas para puntos con el mismo valor
+            // Todos los puntos se apilan verticalmente hacia arriba desde la línea
             const getStackedPositions = (data) => {
                 const valueGroups = {};
                 data.forEach((value, index) => {
@@ -150,26 +152,20 @@
                 });
 
                 const positions = {};
+                // La línea base está cerca del fondo del SVG para dejar espacio arriba para apilamiento
+                const baseY = maxStackHeight - 20; // Posición de la línea horizontal
+                
                 Object.keys(valueGroups).forEach(value => {
                     const indices = valueGroups[value];
-                    const count = indices.length;
-                    const centerY = lineHeight / 2;
                     
                     indices.forEach((index, pos) => {
-                        // Alternar entre arriba y abajo de la línea
-                        if (count === 1) {
-                            positions[index] = { x: valueToX(parseFloat(value)), y: centerY, stackIndex: 0 };
-                        } else {
-                            const halfStack = Math.floor(count / 2);
-                            const offset = pos < halfStack 
-                                ? -(halfStack - pos) * stackSpacing  // Arriba
-                                : (pos - halfStack + (count % 2 === 0 ? 1 : 0)) * stackSpacing; // Abajo
-                            positions[index] = { 
-                                x: valueToX(parseFloat(value)), 
-                                y: centerY + offset, 
-                                stackIndex: pos 
-                            };
-                        }
+                        // Todos los puntos se apilan hacia arriba desde la línea base
+                        const y = baseY - (pos * stackSpacing);
+                        positions[index] = { 
+                            x: valueToX(parseFloat(value)), 
+                            y: y, 
+                            stackIndex: pos 
+                        };
                     });
                 });
 
@@ -216,22 +212,19 @@
 
             return (
                 <div className="mb-6">
-                    <h3 className="text-xl font-bold mb-3" style={{ color: color }}>
-                        {groupName} - Diagrama de Puntos
-                    </h3>
                     <div className="bg-white rounded-lg shadow-lg p-4 border-2" style={{ borderColor: color }}>
                         <svg
                             ref={lineRef}
                             width={lineWidth + padding * 2}
-                            height={lineHeight + 60}
+                            height={maxStackHeight + 60}
                             className="number-line"
                         >
                             {/* Línea numérica */}
                             <line
                                 x1={padding}
-                                y1={lineHeight / 2}
+                                y1={maxStackHeight - 20}
                                 x2={lineWidth + padding}
-                                y2={lineHeight / 2}
+                                y2={maxStackHeight - 20}
                                 stroke="#34495e"
                                 strokeWidth="3"
                             />
@@ -240,19 +233,20 @@
                             {Array.from({ length: 11 }, (_, i) => {
                                 const value = minValue + (i * (maxValue - minValue) / 10);
                                 const x = valueToX(value);
+                                const lineY = maxStackHeight - 20;
                                 return (
                                     <g key={i}>
                                         <line
                                             x1={x}
-                                            y1={lineHeight / 2 - 10}
+                                            y1={lineY - 10}
                                             x2={x}
-                                            y2={lineHeight / 2 + 10}
+                                            y2={lineY + 10}
                                             stroke="#34495e"
                                             strokeWidth="2"
                                         />
                                         <text
                                             x={x}
-                                            y={lineHeight / 2 + 30}
+                                            y={lineY + 30}
                                             textAnchor="middle"
                                             fontSize="14"
                                             fontWeight="bold"
@@ -613,24 +607,33 @@
                                     </div>
                                 </div>
                             </div>
-                            <DotPlot
-                                data={groupA}
-                                groupName="Grupo A"
-                                color={colorA}
-                                onUpdate={(newData) => {
-                                    setGroupA(newData);
-                                }}
-                            />
-                            <StemLeafPlot
-                                data={groupA}
-                                groupName="Grupo A"
-                                color={colorA}
-                                highlightedNumber={selectedGroup === 'A' ? highlightedNumber : null}
-                                onNumberClick={(num) => {
-                                    setHighlightedNumber(num);
-                                    setSelectedGroup('A');
-                                }}
-                            />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ color: colorA }}>
+                                        {groupName} - Diagrama de Puntos
+                                    </h3>
+                                    <DotPlot
+                                        data={groupA}
+                                        groupName="Grupo A"
+                                        color={colorA}
+                                        onUpdate={(newData) => {
+                                            setGroupA(newData);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <StemLeafPlot
+                                        data={groupA}
+                                        groupName="Grupo A"
+                                        color={colorA}
+                                        highlightedNumber={selectedGroup === 'A' ? highlightedNumber : null}
+                                        onNumberClick={(num) => {
+                                            setHighlightedNumber(num);
+                                            setSelectedGroup('A');
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Grupo B */}
@@ -652,24 +655,33 @@
                                     </div>
                                 </div>
                             </div>
-                            <DotPlot
-                                data={groupB}
-                                groupName="Grupo B"
-                                color={colorB}
-                                onUpdate={(newData) => {
-                                    setGroupB(newData);
-                                }}
-                            />
-                            <StemLeafPlot
-                                data={groupB}
-                                groupName="Grupo B"
-                                color={colorB}
-                                highlightedNumber={selectedGroup === 'B' ? highlightedNumber : null}
-                                onNumberClick={(num) => {
-                                    setHighlightedNumber(num);
-                                    setSelectedGroup('B');
-                                }}
-                            />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ color: colorB }}>
+                                        {groupName} - Diagrama de Puntos
+                                    </h3>
+                                    <DotPlot
+                                        data={groupB}
+                                        groupName="Grupo B"
+                                        color={colorB}
+                                        onUpdate={(newData) => {
+                                            setGroupB(newData);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <StemLeafPlot
+                                        data={groupB}
+                                        groupName="Grupo B"
+                                        color={colorB}
+                                        highlightedNumber={selectedGroup === 'B' ? highlightedNumber : null}
+                                        onNumberClick={(num) => {
+                                            setHighlightedNumber(num);
+                                            setSelectedGroup('B');
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Comparación Visual */}

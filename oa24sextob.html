@@ -197,15 +197,34 @@
             );
         }
 
+        // Función para generar porcentajes aleatorios que sumen 100
+        function generateRandomPercentages() {
+            const percentages = [];
+            let remaining = 100;
+            
+            for (let i = 0; i < 3; i++) {
+                // Asegurar al menos 10% para cada uno
+                const min = 10;
+                const max = Math.min(remaining - (3 - i) * 10, 40);
+                const value = Math.floor(Math.random() * (max - min + 1)) + min;
+                percentages.push(value);
+                remaining -= value;
+            }
+            percentages.push(remaining); // El último toma lo que queda
+            return percentages;
+        }
+
         // Componente principal
         function PieChartManipulator() {
+            // Generar porcentajes objetivo aleatorios
+            const [targetPercentages, setTargetPercentages] = useState(() => generateRandomPercentages());
+            // Gráfico inicia con porcentajes diferentes (para que el estudiante ajuste)
             const [percentages, setPercentages] = useState([25, 25, 25, 25]);
             const [draggingHandle, setDraggingHandle] = useState(null); // { sectorIndex, handleType: 'start' | 'end' }
             const [initialAngles, setInitialAngles] = useState([]);
             const [initialPercentages, setInitialPercentages] = useState([25, 25, 25, 25]);
-            const [prediction, setPrediction] = useState({});
-            const [showValidation, setShowValidation] = useState(false);
-            const [showPercentages, setShowPercentages] = useState(true);
+            const [showPercentages, setShowPercentages] = useState(false); // Inicia oculto
+            const [showTarget, setShowTarget] = useState(true); // Mostrar los datos objetivo
             
             const svgRef = useRef(null);
             const radius = 200;
@@ -349,17 +368,34 @@
                 };
             }, [draggingHandle, initialAngles, initialPercentages]);
 
-            // Función para validar predicciones
-            const validatePredictions = () => {
-                setShowValidation(true);
+            // Función para validar si el gráfico coincide con los datos objetivo
+            const validateChart = () => {
+                const tolerance = 2; // Tolerancia de 2%
+                let allMatch = true;
+                const results = percentages.map((pct, idx) => {
+                    const difference = Math.abs(pct - targetPercentages[idx]);
+                    const match = difference <= tolerance;
+                    if (!match) allMatch = false;
+                    return { category: idx, match, difference, current: pct, target: targetPercentages[idx] };
+                });
+                return { allMatch, results };
             };
 
-            // Función para resetear a valores iniciales
+            // Función para generar nuevos datos objetivo
+            const generateNewTarget = () => {
+                const newTargets = generateRandomPercentages();
+                setTargetPercentages(newTargets);
+                setPercentages([25, 25, 25, 25]); // Reiniciar el gráfico
+                setShowPercentages(false); // Ocultar porcentajes nuevamente
+            };
+
+            // Función para resetear el gráfico (mantener datos objetivo)
             const resetChart = () => {
                 setPercentages([25, 25, 25, 25]);
-                setPrediction({});
-                setShowValidation(false);
+                setShowPercentages(false);
             };
+
+            const validationResult = validateChart();
 
             return (
                 <div className="min-h-screen bg-amber-50 py-8 px-4">
@@ -369,8 +405,11 @@
                             <h1 className="text-4xl font-bold text-amber-900 mb-2">
                                 Manipulador de Gráficos Circulares
                             </h1>
-                            <p className="text-lg text-amber-800">
+                            <p className="text-lg text-amber-800 mb-2">
                                 Explora la relación "parte-todo" y comprende cómo funcionan las categorías en un sistema cerrado
+                            </p>
+                            <p className="text-md text-amber-700">
+                                <strong>Instrucciones:</strong> Observa los datos objetivo en la tabla azul. Ajusta el gráfico circular para que coincida con esos porcentajes arrastrando los bordes de los sectores.
                             </p>
                         </div>
 
@@ -439,143 +478,196 @@
                                 </div>
                             </div>
 
-                            {/* Panel derecho: Información y Predicción */}
+                            {/* Panel derecho: Datos Objetivo y Validación */}
                             <div className="space-y-6">
-                                {/* Tabla de Información */}
-                                <div className="bg-white rounded-lg shadow-md p-6">
-                                    <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
-                                        Representación Multimodal
-                                    </h2>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse">
-                                            <thead>
-                                                <tr className="bg-amber-100">
-                                                    <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
-                                                        Categoría
-                                                    </th>
-                                                    <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
-                                                        Porcentaje
-                                                    </th>
-                                                    <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
-                                                        Fracción
-                                                    </th>
-                                                    <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
-                                                        Ángulo
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {percentages.map((pct, idx) => {
-                                                    const fraction = percentageToFraction(pct);
-                                                    const angle = (pct / 100) * 360;
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-amber-50">
-                                                            <td className="border border-amber-300 px-4 py-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div 
-                                                                        className="w-4 h-4 rounded"
-                                                                        style={{ backgroundColor: colors[idx] }}
-                                                                    ></div>
-                                                                    <span className="font-medium text-amber-900">
-                                                                        Categoría {idx + 1}
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="border border-amber-300 px-4 py-3 text-amber-800">
-                                                                {pct.toFixed(1)}%
-                                                            </td>
-                                                            <td className="border border-amber-300 px-4 py-3 text-amber-800 font-mono">
-                                                                {fraction.num}/{fraction.den}
-                                                            </td>
-                                                            <td className="border border-amber-300 px-4 py-3 text-amber-800">
-                                                                {angle.toFixed(1)}°
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                <tr className="bg-amber-100 font-semibold">
-                                                    <td className="border border-amber-300 px-4 py-3 text-amber-900">Total</td>
-                                                    <td className="border border-amber-300 px-4 py-3 text-amber-900">
-                                                        {percentages.reduce((sum, pct) => sum + pct, 0).toFixed(1)}%
-                                                    </td>
-                                                    <td className="border border-amber-300 px-4 py-3 text-amber-900">1/1</td>
-                                                    <td className="border border-amber-300 px-4 py-3 text-amber-900">360°</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                {/* Tabla de Datos Objetivo */}
+                                {showTarget && (
+                                    <div className="bg-blue-50 rounded-lg shadow-md p-6 border-2 border-blue-400">
+                                        <h2 className="text-2xl font-semibold text-blue-900 mb-4 text-center">
+                                            📋 Datos Objetivo
+                                        </h2>
+                                        <p className="text-sm text-blue-700 mb-4 text-center">
+                                            Ajusta el gráfico circular para que coincida con estos porcentajes:
+                                        </p>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse">
+                                                <thead>
+                                                    <tr className="bg-blue-100">
+                                                        <th className="border border-blue-300 px-4 py-3 text-left font-semibold text-blue-900">
+                                                            Categoría
+                                                        </th>
+                                                        <th className="border border-blue-300 px-4 py-3 text-left font-semibold text-blue-900">
+                                                            Porcentaje Objetivo
+                                                        </th>
+                                                        <th className="border border-blue-300 px-4 py-3 text-left font-semibold text-blue-900">
+                                                            Fracción
+                                                        </th>
+                                                        <th className="border border-blue-300 px-4 py-3 text-left font-semibold text-blue-900">
+                                                            Ángulo
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {targetPercentages.map((pct, idx) => {
+                                                        const fraction = percentageToFraction(pct);
+                                                        const angle = (pct / 100) * 360;
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-blue-50">
+                                                                <td className="border border-blue-300 px-4 py-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div 
+                                                                            className="w-4 h-4 rounded"
+                                                                            style={{ backgroundColor: colors[idx] }}
+                                                                        ></div>
+                                                                        <span className="font-medium text-blue-900">
+                                                                            Categoría {idx + 1}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="border border-blue-300 px-4 py-3 text-blue-800 font-bold">
+                                                                    {pct.toFixed(1)}%
+                                                                </td>
+                                                                <td className="border border-blue-300 px-4 py-3 text-blue-800 font-mono">
+                                                                    {fraction.num}/{fraction.den}
+                                                                </td>
+                                                                <td className="border border-blue-300 px-4 py-3 text-blue-800">
+                                                                    {angle.toFixed(1)}°
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    <tr className="bg-blue-100 font-semibold">
+                                                        <td className="border border-blue-300 px-4 py-3 text-blue-900">Total</td>
+                                                        <td className="border border-blue-300 px-4 py-3 text-blue-900">100.0%</td>
+                                                        <td className="border border-blue-300 px-4 py-3 text-blue-900">1/1</td>
+                                                        <td className="border border-blue-300 px-4 py-3 text-blue-900">360°</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button
+                                            onClick={generateNewTarget}
+                                            className="mt-4 w-full px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors"
+                                        >
+                                            Generar Nuevos Datos Objetivo
+                                        </button>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Panel de Predicción */}
+                                {/* Tabla de Estado Actual (solo si se muestran porcentajes) */}
+                                {showPercentages && (
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
+                                            Estado Actual del Gráfico
+                                        </h2>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse">
+                                                <thead>
+                                                    <tr className="bg-amber-100">
+                                                        <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                            Categoría
+                                                        </th>
+                                                        <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                            Porcentaje
+                                                        </th>
+                                                        <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                            Fracción
+                                                        </th>
+                                                        <th className="border border-amber-300 px-4 py-3 text-left font-semibold text-amber-900">
+                                                            Ángulo
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {percentages.map((pct, idx) => {
+                                                        const fraction = percentageToFraction(pct);
+                                                        const angle = (pct / 100) * 360;
+                                                        const match = validationResult.results[idx]?.match;
+                                                        return (
+                                                            <tr key={idx} className={`hover:bg-amber-50 ${match ? 'bg-green-50' : ''}`}>
+                                                                <td className="border border-amber-300 px-4 py-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div 
+                                                                            className="w-4 h-4 rounded"
+                                                                            style={{ backgroundColor: colors[idx] }}
+                                                                        ></div>
+                                                                        <span className="font-medium text-amber-900">
+                                                                            Categoría {idx + 1}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                                    {pct.toFixed(1)}%
+                                                                </td>
+                                                                <td className="border border-amber-300 px-4 py-3 text-amber-800 font-mono">
+                                                                    {fraction.num}/{fraction.den}
+                                                                </td>
+                                                                <td className="border border-amber-300 px-4 py-3 text-amber-800">
+                                                                    {angle.toFixed(1)}°
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    <tr className="bg-amber-100 font-semibold">
+                                                        <td className="border border-amber-300 px-4 py-3 text-amber-900">Total</td>
+                                                        <td className="border border-amber-300 px-4 py-3 text-amber-900">
+                                                            {percentages.reduce((sum, pct) => sum + pct, 0).toFixed(1)}%
+                                                        </td>
+                                                        <td className="border border-amber-300 px-4 py-3 text-amber-900">1/1</td>
+                                                        <td className="border border-amber-300 px-4 py-3 text-amber-900">360°</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Validación */}
                                 <div className="bg-white rounded-lg shadow-md p-6">
                                     <h2 className="text-2xl font-semibold text-amber-900 mb-4 text-center">
-                                        Validación de Predicción
+                                        Validación
                                     </h2>
                                     
-                                    <p className="text-sm text-amber-700 mb-4">
-                                        Antes de mover el gráfico, predice qué porcentaje tendrá cada categoría después de tu modificación:
-                                    </p>
-
-                                    <div className="space-y-3 mb-4">
-                                        {percentages.map((pct, idx) => (
-                                            <div key={idx}>
-                                                <label className="block text-sm font-medium text-amber-900 mb-1">
-                                                    Categoría {idx + 1}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.1"
-                                                    value={prediction[idx] ?? ''}
-                                                    onChange={(e) => {
-                                                        const value = parseFloat(e.target.value) || '';
-                                                        setPrediction({ ...prediction, [idx]: value });
-                                                        setShowValidation(false);
-                                                    }}
-                                                    className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                                                    placeholder="Predice el %"
-                                                />
+                                    {validationResult.allMatch ? (
+                                        <div className="p-4 bg-green-100 border-2 border-green-500 rounded-lg text-center">
+                                            <p className="text-green-800 font-bold text-lg mb-2">
+                                                ✅ ¡Excelente! El gráfico coincide con los datos objetivo
+                                            </p>
+                                            <p className="text-green-700 text-sm">
+                                                Todos los porcentajes están dentro del rango aceptable (±2%)
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="p-4 bg-yellow-100 border-2 border-yellow-500 rounded-lg">
+                                                <p className="text-yellow-800 font-bold mb-2">
+                                                    ⚠️ Ajusta el gráfico para que coincida con los datos objetivo
+                                                </p>
+                                                <p className="text-yellow-700 text-sm mb-3">
+                                                    Comparación con datos objetivo:
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {validationResult.results.map((result, idx) => {
+                                                        if (result.match) return null;
+                                                        return (
+                                                            <div key={idx} className="text-sm bg-white p-2 rounded">
+                                                                <strong>Categoría {idx + 1}:</strong> 
+                                                                <span className="ml-2">
+                                                                    Actual: {result.current.toFixed(1)}% | 
+                                                                    Objetivo: {result.target.toFixed(1)}% | 
+                                                                    Diferencia: {result.difference.toFixed(1)}%
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-
-                                    <button
-                                        onClick={validatePredictions}
-                                        className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 transition-colors mb-4"
-                                    >
-                                        Validar Predicción
-                                    </button>
-
-                                    {showValidation && (
-                                        <div className="mt-4 space-y-2">
-                                            {percentages.map((pct, idx) => {
-                                                const pred = prediction[idx];
-                                                if (pred === undefined || pred === '') return null;
-                                                
-                                                const difference = Math.abs(pct - pred);
-                                                const isMatch = difference < 2; // Tolerancia de 2%
-                                                
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`p-3 rounded-lg border-2 ${
-                                                            isMatch ? 'prediction-match' : 'prediction-mismatch'
-                                                        }`}
-                                                    >
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="font-medium text-amber-900">
-                                                                Categoría {idx + 1}:
-                                                            </span>
-                                                            <span className="text-sm">
-                                                                Prediciste: {pred.toFixed(1)}% | 
-                                                                Real: {pct.toFixed(1)}% | 
-                                                                Diferencia: {difference.toFixed(1)}%
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                            <button
+                                                onClick={() => setShowPercentages(!showPercentages)}
+                                                className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg shadow-md hover:bg-amber-700 transition-colors"
+                                            >
+                                                {showPercentages ? 'Ocultar' : 'Mostrar'} Porcentajes Actuales
+                                            </button>
                                         </div>
                                     )}
                                 </div>

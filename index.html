@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
             background: radial-gradient(ellipse at center, #1a0d00 0%, #0a0500 50%, #000000 100%);
             min-height: 100vh;
             display: flex;
@@ -23,6 +23,8 @@
             color: #fff;
             position: relative;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         body::before {
@@ -47,6 +49,10 @@
             z-index: 1;
         }
 
+        .header-section {
+            margin-bottom: 50px;
+        }
+
         .title {
             font-size: 64px;
             font-weight: 800;
@@ -56,9 +62,33 @@
                 0 0 60px rgba(212, 175, 55, 0.4),
                 0 4px 10px rgba(0, 0, 0, 0.8),
                 2px 2px 4px rgba(0, 0, 0, 0.9);
-            margin-bottom: 60px;
+            margin-bottom: 12px;
             letter-spacing: 6px;
             animation: fadeInDown 0.8s ease-out, glow 3s ease-in-out infinite alternate;
+        }
+
+        .author-name {
+            font-size: 14px;
+            font-weight: 300;
+            color: rgba(212, 175, 55, 0.5);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 60px;
+            animation: fadeInDown 1s ease-out 0.3s backwards;
+            font-style: italic;
+            position: relative;
+            display: inline-block;
+        }
+
+        .author-name::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.3), transparent);
         }
 
         @keyframes glow {
@@ -86,17 +116,17 @@
         .nav-button {
             padding: 28px 24px;
             font-size: 18px;
-            font-weight: 700;
+            font-weight: 600;
             text-decoration: none;
             color: #fff;
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 134, 11, 0.1) 100%);
-            border: 2px solid rgba(212, 175, 55, 0.4);
-            border-radius: 16px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(184, 134, 11, 0.08) 100%);
+            border: 1.5px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 
                 0 4px 15px rgba(0, 0, 0, 0.4),
-                0 0 20px rgba(212, 175, 55, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                0 0 20px rgba(212, 175, 55, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -123,13 +153,13 @@
         }
 
         .nav-button:hover {
-            transform: translateY(-8px) scale(1.02);
+            transform: translateY(-6px) scale(1.01);
             box-shadow: 
-                0 12px 30px rgba(0, 0, 0, 0.5),
-                0 0 40px rgba(212, 175, 55, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            border-color: rgba(212, 175, 55, 0.8);
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(184, 134, 11, 0.2) 100%);
+                0 10px 28px rgba(0, 0, 0, 0.5),
+                0 0 35px rgba(212, 175, 55, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            border-color: rgba(212, 175, 55, 0.7);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(184, 134, 11, 0.18) 100%);
         }
 
         .nav-button:active {
@@ -224,8 +254,14 @@
         @media (max-width: 768px) {
             .title {
                 font-size: 42px;
-                margin-bottom: 40px;
+                margin-bottom: 10px;
                 letter-spacing: 3px;
+            }
+
+            .author-name {
+                font-size: 12px;
+                margin-bottom: 40px;
+                letter-spacing: 2px;
             }
 
             .navigation {
@@ -243,8 +279,14 @@
         @media (max-width: 480px) {
             .title {
                 font-size: 32px;
-                margin-bottom: 30px;
+                margin-bottom: 8px;
                 letter-spacing: 2px;
+            }
+
+            .author-name {
+                font-size: 11px;
+                margin-bottom: 30px;
+                letter-spacing: 1.5px;
             }
 
             .nav-button {
@@ -257,7 +299,10 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="title">PÁGINA DE PRUEBA</h1>
+        <div class="header-section">
+            <h1 class="title">PÁGINA DE PRUEBA</h1>
+            <p class="author-name">Cristopher Olivera San Martín</p>
+        </div>
         
         <nav class="navigation">
             <a href="suma-enteros.html" class="nav-button active">SUMA DE ENTEROS</a>
