@@ -108,14 +108,15 @@
             margin-bottom: 30px;
             background: rgba(236, 240, 241, 0.1);
             border-radius: 8px;
-            padding: 20px;
-            min-height: 200px;
+            padding: 10px 20px 0px 20px;
+            min-height: 180px;
+            overflow: visible;
         }
 
         .number-line {
             position: relative;
             height: 80px;
-            margin-top: 20px;
+            margin-top: 100px;
             border-top: 3px solid #ecf0f1;
         }
 
@@ -160,9 +161,24 @@
             z-index: 10;
         }
 
-        .dot:hover {
+        .dot.group-a {
+            background: #e74c3c;
+            border-color: #c0392b;
+        }
+
+        .dot.group-b {
+            background: #3498db;
+            border-color: #2980b9;
+        }
+
+        .dot.group-a:hover {
             transform: translate(-50%, -50%) scale(1.3);
             box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+        }
+
+        .dot.group-b:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
         }
 
         .dot-group {
@@ -272,6 +288,73 @@
             margin: 15px 0;
         }
 
+        .data-table-container {
+            background: rgba(52, 73, 94, 0.8);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .data-table-title {
+            font-size: 1.5em;
+            color: #f39c12;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(44, 62, 80, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table th {
+            background: rgba(52, 152, 219, 0.4);
+            color: #ecf0f1;
+            padding: 12px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1em;
+            border: 2px solid rgba(52, 152, 219, 0.6);
+        }
+
+        .data-table th.group-a-header {
+            background: rgba(231, 76, 60, 0.4);
+            border-color: rgba(231, 76, 60, 0.6);
+        }
+
+        .data-table th.group-b-header {
+            background: rgba(52, 152, 219, 0.4);
+            border-color: rgba(52, 152, 219, 0.6);
+        }
+
+        .data-table td {
+            padding: 10px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 700;
+            border: 1px solid rgba(236, 240, 241, 0.2);
+            color: #ecf0f1;
+        }
+
+        .data-table td.group-a-cell {
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .data-table td.group-b-cell {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .data-table td.empty {
+            color: #95a5a6;
+            font-style: italic;
+        }
+
         @media (max-width: 1200px) {
             .groups-container {
                 grid-template-columns: 1fr;
@@ -308,6 +391,23 @@
                 <p class="formula">Fórmula: x = 10t + h</p>
                 <p class="info-text">Haz clic en un número en el diagrama de puntos para ver su descomposición en tallo y hojas</p>
             </div>
+        </div>
+
+        <div class="data-table-container">
+            <h2 class="data-table-title">Tabla de Datos</h2>
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th class="group-a-header">Estudiante</th>
+                        <th class="group-a-header">Grupo A</th>
+                        <th class="group-b-header">Estudiante</th>
+                        <th class="group-b-header">Grupo B</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <!-- Se llenará dinámicamente -->
+                </tbody>
+            </table>
         </div>
 
         <div class="groups-container">
@@ -352,6 +452,7 @@
             setupModeButtons();
             updateStemLeaf('A');
             updateStemLeaf('B');
+            updateDataTable();
         }
 
         // Configurar las rectas numéricas
@@ -408,6 +509,7 @@
                 data.sort((a, b) => a - b);
                 updateDotPlot(group);
                 updateStemLeaf(group);
+                updateDataTable();
                 
                 // Resaltar descomposición
                 highlightDecomposition(group, value);
@@ -422,6 +524,7 @@
                 data.splice(closestIndex, 1);
                 updateDotPlot(group);
                 updateStemLeaf(group);
+                updateDataTable();
                 clearHighlights(group);
             }
         }
@@ -458,7 +561,7 @@
                 // Crear puntos apilados verticalmente
                 for (let i = 0; i < count; i++) {
                     const dot = document.createElement('div');
-                    dot.className = 'dot';
+                    dot.className = `dot group-${group.toLowerCase()}`;
                     dot.style.top = `${-20 - (i * 25)}px`;
                     dot.dataset.value = value;
                     dot.addEventListener('click', (e) => {
@@ -469,6 +572,7 @@
                                 data.splice(index, 1);
                                 updateDotPlot(group);
                                 updateStemLeaf(group);
+                                updateDataTable();
                                 clearHighlights(group);
                             }
                         } else {
@@ -579,6 +683,54 @@
             
             if (highlightedNumber && highlightedNumber.group === group) {
                 highlightedNumber = null;
+            }
+        }
+
+        // Actualizar tabla de datos
+        function updateDataTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            const maxRows = Math.max(groupAData.length, groupBData.length, 10);
+            
+            for (let i = 0; i < maxRows; i++) {
+                const row = document.createElement('tr');
+                
+                // Columna estudiante A
+                const studentACell = document.createElement('td');
+                studentACell.textContent = i + 1;
+                studentACell.className = 'group-a-cell';
+                row.appendChild(studentACell);
+                
+                // Columna valor A
+                const valueACell = document.createElement('td');
+                if (i < groupAData.length) {
+                    valueACell.textContent = groupAData[i];
+                    valueACell.className = 'group-a-cell';
+                } else {
+                    valueACell.textContent = '-';
+                    valueACell.className = 'group-a-cell empty';
+                }
+                row.appendChild(valueACell);
+                
+                // Columna estudiante B
+                const studentBCell = document.createElement('td');
+                studentBCell.textContent = i + 1;
+                studentBCell.className = 'group-b-cell';
+                row.appendChild(studentBCell);
+                
+                // Columna valor B
+                const valueBCell = document.createElement('td');
+                if (i < groupBData.length) {
+                    valueBCell.textContent = groupBData[i];
+                    valueBCell.className = 'group-b-cell';
+                } else {
+                    valueBCell.textContent = '-';
+                    valueBCell.className = 'group-b-cell empty';
+                }
+                row.appendChild(valueBCell);
+                
+                tbody.appendChild(row);
             }
         }
 
