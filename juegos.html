@@ -3,190 +3,610 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta simple</title>
+    <title>Ruleta Misteriosa</title>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top, #1f2937 0%, #020617 55%, #000 100%);
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #0f172a;
+            align-items: stretch;
             color: #e5e7eb;
         }
 
-        .roulette-container {
-            position: relative;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            border: 6px solid #e5e7eb;
-            background: radial-gradient(circle at 30% 20%, #1f2937 0, #020617 70%);
-            box-shadow:
-                0 18px 40px rgba(0, 0, 0, 0.7),
-                0 0 0 1px rgba(148, 163, 184, 0.4);
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            width: 100%;
+        }
+
+        /* Panel izquierdo: info / tabla de puntajes */
+        .info-panel {
+            background: rgba(15, 23, 42, 0.96);
+            padding: 28px 24px;
+            box-shadow: 4px 0 18px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .info-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #fbbf24;
+            text-align: center;
+        }
+
+        .student-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .student-name {
+            min-height: 48px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            font-size: 18px;
+            font-weight: 600;
+            color: #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 24px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .score-table {
+            margin-top: 8px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            padding: 14px 16px;
+        }
+
+        .score-table-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 4px;
+            font-size: 14px;
+            color: #e5e7eb;
+        }
+
+        .score-row + .score-row {
+            border-top: 1px dashed rgba(55, 65, 81, 0.9);
+        }
+
+        .score-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+        }
+
+        .dot-yellow { background: #facc15; }
+        .dot-orange { background: #fb923c; }
+        .dot-red { background: #ef4444; }
+
+        .score-points {
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        .small-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        /* Zona derecha: juego */
+        .game-panel {
+            flex: 1;
+            padding: 32px 32px 32px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .title {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            color: #fbbf24;
+            text-shadow:
+                0 0 18px rgba(250, 191, 36, 0.7),
+                0 4px 8px rgba(0, 0, 0, 0.9);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .roulette-wrapper {
+            margin-top: 10px;
+            position: relative;
+            width: 360px;
+            height: 220px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .roulette-view {
+            position: relative;
+            width: 360px;
+            height: 180px;
             overflow: hidden;
+            border-radius: 180px 180px 0 0;
+            background: radial-gradient(circle at 30% 0, #111827 0%, #020617 50%, #000 100%);
+            box-shadow:
+                0 18px 40px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(15, 23, 42, 0.8);
+            cursor: pointer; /* indicar que es interactiva */
         }
 
         .wheel {
-            width: 80%;
-            height: 80%;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 340px;
+            height: 340px;
+            margin-left: -170px;
             border-radius: 50%;
-            border: 2px dashed rgba(148, 163, 184, 0.5);
-            background: radial-gradient(circle at 30% 20%, #111827 0, #020617 70%);
-            box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background:
+                conic-gradient(
+                    from 0deg,
+                    #111827 0deg 155deg,
+                    #facc15 155deg 165deg,
+                    #fb923c 165deg 175deg,
+                    #ef4444 175deg 185deg,
+                    #fb923c 185deg 195deg,
+                    #facc15 195deg 205deg,
+                    #111827 205deg 360deg
+                );
+            box-shadow:
+                0 0 0 6px rgba(15, 23, 42, 0.9),
+                0 0 0 1px rgba(148, 163, 184, 0.4),
+                inset 0 0 26px rgba(0, 0, 0, 0.9);
             transition: transform 2s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        /* Segmentos de 10° (aprox) uno junto a otro */
-        .segment {
+        .wheel-center {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 26px;
-            height: 85px;
-            transform-origin: bottom center;
-            transform: rotate(var(--angle));
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: 6px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #f9fafb;
-            letter-spacing: 0.03em;
-            clip-path: polygon(20% 0, 80% 0, 100% 100%, 0% 100%);
-            text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-        }
-
-        .segment.v1 {
-            background: #facc15; /* amarillos para los 1 */
-        }
-
-        .segment.v3 {
-            background: #f97316; /* naranjas para los 3 */
-        }
-
-        .segment.v5 {
-            background: #22c55e; /* verde para el 5 */
-        }
-
-        .center-dot {
-            width: 22px;
-            height: 22px;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            background: #e5e7eb;
+            background: radial-gradient(circle at 30% 20%, #e5e7eb 0, #9ca3af 45%, #020617 100%);
             box-shadow:
-                0 0 0 4px rgba(15, 23, 42, 0.9),
-                0 0 14px rgba(248, 250, 252, 0.8);
+                0 0 0 3px rgba(15, 23, 42, 0.9),
+                0 6px 18px rgba(0, 0, 0, 0.9);
+        }
+
+        .pointer-wrapper {
+            position: absolute;
+            /* Ajustado para que la base quede justo sobre el borde del semicírculo visible */
+            top: 220px;
+            left: 50%;
+            transform: translateX(-50%) rotate(0deg);
+            transform-origin: center bottom;
+            width: 0;
+            height: 0;
+            z-index: 100; /* siempre por encima de la cortina y la ruleta */
+        }
+
+        .roulette-labels {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .roulette-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
         }
 
         .pointer {
             position: absolute;
-            top: -4px;
+            bottom: 0;
+            left: -2px;
+            width: 4px;
+            height: 150px;
+            background: #ef4444; /* rojo intenso, tipo velocímetro */
+            border-radius: 999px;
+            box-shadow:
+                0 0 8px rgba(0, 0, 0, 0.9),
+                0 0 10px rgba(248, 113, 113, 0.8);
+            transform-origin: bottom center; /* pivote en la base de la aguja */
+            cursor: grab;
+        }
+
+        /* Cortina */
+        .curtain {
+            position: absolute;
+            top: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-bottom: 18px solid #fbbf24;
-            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7));
+            width: 360px;
+            height: 180px;
+            border-radius: 180px 180px 0 0;
+            background-color: #111827; /* totalmente opaco, sin transparencia */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f9fafb;
+            font-size: 16px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+            z-index: 5;
+            transition: transform 0.45s ease-in-out, opacity 0.45s ease-in-out;
         }
 
+        .curtain.hidden {
+            transform: translate(-50%, 110%);
+            opacity: 0;
+            box-shadow: none;
+        }
+
+        /* Controles */
         .controls {
             display: flex;
-            gap: 12px;
+            gap: 14px;
+            margin-top: 10px;
         }
 
-        button {
-            padding: 10px 20px;
+        .btn {
+            padding: 10px 22px;
             border-radius: 999px;
             border: none;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: #f9fafb;
-            font-size: 0.95rem;
+            font-size: 13px;
             font-weight: 600;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(22, 163, 74, 0.55);
-            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #0b1120;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            box-shadow: 0 10px 25px rgba(250, 204, 21, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.2s ease;
         }
 
-        button:active {
-            transform: translateY(1px) scale(0.98);
-            box-shadow: 0 6px 18px rgba(22, 163, 74, 0.6);
+        .btn-secondary {
+            background: linear-gradient(135deg, #1f2937, #0f172a);
+            color: #e5e7eb;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
         }
 
-        button:disabled {
-            opacity: 0.55;
+        .btn:active {
+            transform: translateY(1px) scale(0.99);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
             cursor: default;
             box-shadow: none;
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .info-panel {
+                border-bottom: 1px solid rgba(31, 41, 55, 0.8);
+            }
+
+            .game-panel {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="layout">
+        <!-- Panel izquierdo: leyenda y alumno -->
+        <aside class="info-panel">
+            <div class="info-title">Leyenda de Puntajes</div>
 
-    <div class="roulette-container">
-        <div class="pointer"></div>
-        <div id="wheel" class="wheel">
-            <!-- 5 segmentos de 10° aprox: 1, 3, 5, 3, 1 -->
-            <div class="segment v1" style="--angle: -20deg;">1</div>
-            <div class="segment v3" style="--angle: -10deg;">3</div>
-            <div class="segment v5" style="--angle: 0deg;">5</div>
-            <div class="segment v3" style="--angle: 10deg;">3</div>
-            <div class="segment v1" style="--angle: 20deg;">1</div>
-            <div class="center-dot"></div>
-        </div>
-    </div>
+            <div>
+                <div class="student-label">Alumno seleccionado</div>
+                <div id="studentName" class="student-name">Sin selección</div>
+            </div>
 
-    <div class="controls">
-        <button id="spinBtn">Girar ruleta</button>
+            <div class="score-table">
+                <div class="score-table-title">Colores de la ruleta</div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-yellow"></span>
+                        <span>Segmento Amarillo</span>
+                    </div>
+                    <span class="score-points">1 punto</span>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-orange"></span>
+                        <span>Segmento Naranja</span>
+                    </div>
+                    <span class="score-points">3 puntos</span>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-left">
+                        <span class="color-dot dot-red"></span>
+                        <span>Segmento Rojo</span>
+                    </div>
+                    <span class="score-points">5 puntos</span>
+                </div>
+
+                <p class="small-note">
+                    La ruleta muestra siempre un bloque especial de 50° con la secuencia
+                    1-3-5-3-1 visible en el semicírculo superior.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Panel derecho: juego -->
+        <main class="game-panel">
+            <div class="title">RULETA MISTERIOSA</div>
+            <p class="subtitle">
+                Gira la ruleta. El bloque de colores siempre caerá en la zona visible,
+                pero el resultado sigue siendo un misterio para el alumno.
+            </p>
+
+            <div class="roulette-wrapper">
+                <div class="roulette-view">
+                    <div class="wheel" id="wheel">
+                        <div class="wheel-center"></div>
+                    </div>
+                    <div class="curtain" id="curtain">RESULTADO OCULTO</div>
+                </div>
+                <div class="roulette-labels">
+                    <span class="roulette-label">0%</span>
+                    <span class="roulette-label">100%</span>
+                </div>
+                <div class="pointer-wrapper" id="pointerWrapper">
+                    <div class="pointer" id="pointer"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="spinBtn">Girar</button>
+                <button class="btn btn-secondary" id="toggleCurtainBtn">Esconder / Mostrar</button>
+            </div>
+        </main>
     </div>
 
     <script>
+        // --- Lógica de alumnos desde localStorage (clave 'listaEstudiantes') ---
+        function getStudentList() {
+            const savedList = localStorage.getItem('listaEstudiantes') || '';
+            if (!savedList.trim()) return [];
+
+            return savedList
+                .split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+        }
+
+        // Manejo de índice secuencial
+        function getCurrentStudentIndex(max) {
+            const stored = parseInt(localStorage.getItem('indiceRuletaMisteriosa') || '0', 10);
+            if (isNaN(stored) || stored < 0) return 0;
+            if (stored >= max) return 0;
+            return stored;
+        }
+
+        function setCurrentStudentIndex(index) {
+            localStorage.setItem('indiceRuletaMisteriosa', String(index));
+        }
+
+        // Mostrar alumno actual sin avanzar
+        function showCurrentStudent() {
+            const studentNameEl = document.getElementById('studentName');
+            const students = getStudentList();
+            if (!students.length) {
+                studentNameEl.textContent = 'No hay alumnos en listaEstudiantes';
+                return;
+            }
+            const idx = getCurrentStudentIndex(students.length);
+            studentNameEl.textContent = students[idx];
+        }
+
+        // Avanzar al siguiente alumno en orden circular
+        function advanceStudent() {
+            const studentNameEl = document.getElementById('studentName');
+            const students = getStudentList();
+            if (!students.length) {
+                studentNameEl.textContent = 'No hay alumnos en listaEstudiantes';
+                return;
+            }
+            let idx = getCurrentStudentIndex(students.length);
+            idx = (idx + 1) % students.length;
+            setCurrentStudentIndex(idx);
+            studentNameEl.textContent = students[idx];
+        }
+
+        // --- Lógica de ruleta ---
         const wheel = document.getElementById('wheel');
+        const curtain = document.getElementById('curtain');
         const spinBtn = document.getElementById('spinBtn');
+        const toggleCurtainBtn = document.getElementById('toggleCurtainBtn');
+        const pointerWrapper = document.getElementById('pointerWrapper');
+        const pointer = document.getElementById('pointer');
+        const rouletteView = document.querySelector('.roulette-view');
 
         let currentRotation = 0;
         let isSpinning = false;
+        let pointerAngle = 0;
+        let isDraggingPointer = false;
 
-        function spin() {
+        function setPointerAngle(deg) {
+            // Limitar entre -90° (izquierda) y 90° (derecha)
+            const clamped = Math.max(-90, Math.min(90, deg));
+            pointerAngle = clamped;
+            pointerWrapper.style.transform = 'translateX(-50%) rotate(' + clamped + 'deg)';
+        }
+
+        function updatePointerFromEvent(e) {
+            const rect = rouletteView.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            // Centro del círculo está unos px por debajo del borde inferior visible
+            const centerY = rect.top + 170; // coincide con top de pointer-wrapper
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - centerX;
+            const dy = centerY - clientY; // positivo hacia arriba
+
+            const radians = Math.atan2(dx, dy);
+            const degrees = radians * (180 / Math.PI); // 0° arriba, positivo hacia la derecha
+
+            setPointerAngle(degrees);
+        }
+
+        function spinMysteryWheel() {
             if (isSpinning) return;
             isSpinning = true;
             spinBtn.disabled = true;
 
-            // entre 3 y 6 vueltas completas + un ángulo extra aleatorio
-            const extraTurns = 3 + Math.floor(Math.random() * 4); // 3, 4, 5 o 6
-            const randomAngle = Math.floor(Math.random() * 360);
-            const delta = extraTurns * 360 + randomAngle;
+            // Queremos que el bloque especial (155° a 205°) quede entre 45° y 135° visibles.
+            // Bloque centro = 180°. Tomamos un ángulo visible entre 45 y 135 para ese centro.
+            const centerVisibleMin = 45;
+            const centerVisibleMax = 135;
+            const targetCenterVisible =
+                centerVisibleMin + Math.random() * (centerVisibleMax - centerVisibleMin);
 
-            currentRotation += delta;
+            // Diferencia que debemos aplicar para llevar el centro (180°) a ese rango.
+            const deltaWithinCircle = targetCenterVisible - 180; // puede ser negativo o positivo
+
+            // Varias vueltas completas para el efecto visual.
+            const fullTurns = 4 + Math.floor(Math.random() * 3); // 4–6 vueltas
+            const deltaTotal = fullTurns * 360 + deltaWithinCircle;
+
+            currentRotation += deltaTotal;
             wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
 
-            // La transición CSS dura 2s, así que esperamos un poco más de 2s
             setTimeout(() => {
                 isSpinning = false;
                 spinBtn.disabled = false;
-            }, 2100);
+                // Avanzamos al siguiente alumno en orden
+                advanceStudent();
+            }, 2100); // un poco más que la transición de 2s
         }
 
-        spinBtn.addEventListener('click', spin);
+        function toggleCurtain() {
+            curtain.classList.toggle('hidden');
+        }
+
+        spinBtn.addEventListener('click', spinMysteryWheel);
+        toggleCurtainBtn.addEventListener('click', toggleCurtain);
+
+        // --- Interacción con la aguja ---
+        pointer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            pointer.style.cursor = 'grabbing';
+        });
+
+        rouletteView.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            pointer.style.cursor = 'grabbing';
+            updatePointerFromEvent(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingPointer) return;
+            updatePointerFromEvent(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isDraggingPointer) return;
+            isDraggingPointer = false;
+            pointer.style.cursor = 'grab';
+        });
+
+        // Soporte táctil
+        pointer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+        }, { passive: false });
+
+        rouletteView.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDraggingPointer = true;
+            updatePointerFromEvent(e);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDraggingPointer) return;
+            updatePointerFromEvent(e);
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            isDraggingPointer = false;
+        });
+
+        // Al cargar la página, mostramos el alumno actual (sin avanzar)
+        showCurrentStudent();
+        setPointerAngle(0);
     </script>
 </body>
 </html>
+
+
