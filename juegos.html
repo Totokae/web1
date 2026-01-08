@@ -619,10 +619,13 @@
         </main>
     </div>
 
-    <!-- Modal de entrada de usuario -->
-    <div class="user-modal" id="userModal">
+    <!-- Modal de entrada de usuario (oculto por defecto, solo se muestra la primera vez) -->
+    <div class="user-modal hidden" id="userModal">
         <div class="user-modal-content">
             <h2 class="user-modal-title">Ingresa tu Nombre</h2>
+            <p style="text-align: center; color: #9ca3af; font-size: 13px; margin-bottom: 20px;">
+                Solo necesitas ingresar tu nombre una vez
+            </p>
             <input 
                 type="text" 
                 id="usernameInput" 
@@ -656,30 +659,49 @@
             return false;
         }
 
-        // Mostrar modal de entrada
+        // Mostrar modal de entrada (solo si no hay nombre guardado)
         function showUserModal() {
+            // Verificar nuevamente si ya hay un nombre guardado (por si acaso)
+            const savedUsername = localStorage.getItem('juegos_username');
+            if (savedUsername && savedUsername.trim().length > 0) {
+                currentUsername = savedUsername;
+                registerUser(savedUsername);
+                return;
+            }
+
             const modal = document.getElementById('userModal');
             const input = document.getElementById('usernameInput');
             modal.classList.remove('hidden');
             input.focus();
             
-            // Guardar username del modal
+            // Limpiar listeners previos para evitar duplicados
             const submitBtn = document.getElementById('submitUsernameBtn');
+            const newSubmitBtn = submitBtn.cloneNode(true);
+            submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
+            
+            // Guardar username del modal
             const handleSubmit = () => {
                 const username = input.value.trim();
-                if (username.length > 0) {
-                    currentUsername = username;
+                if (username.length > 0 && username.length <= 30) {
+                    // Guardar en localStorage ANTES de ocultar el modal
                     localStorage.setItem('juegos_username', username);
+                    currentUsername = username;
                     modal.classList.add('hidden');
+                    // Registrar usuario después de cerrar el modal
                     registerUser(username);
-                } else {
+                } else if (username.length === 0) {
                     alert('Por favor ingresa un nombre de usuario');
+                    input.focus();
+                } else {
+                    alert('El nombre de usuario debe tener máximo 30 caracteres');
+                    input.focus();
                 }
             };
             
-            submitBtn.onclick = handleSubmit;
+            newSubmitBtn.onclick = handleSubmit;
             input.onkeypress = (e) => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     handleSubmit();
                 }
             };
@@ -854,15 +876,31 @@
             return div.innerHTML;
         }
 
+        // Verificar si el usuario ya está registrado
+        function checkExistingUser() {
+            const savedUsername = localStorage.getItem('juegos_username');
+            if (savedUsername && savedUsername.trim().length > 0) {
+                currentUsername = savedUsername.trim();
+                // Ocultar modal por si acaso está visible
+                const modal = document.getElementById('userModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+                // Registrar usuario automáticamente
+                registerUser(currentUsername);
+                return true;
+            }
+            return false;
+        }
+
         // Inicialización al cargar
         window.addEventListener('DOMContentLoaded', () => {
+            // Primero verificar si ya hay un usuario guardado
+            const hasExistingUser = checkExistingUser();
+            
             if (initSupabase()) {
-                // Verificar si ya hay un nombre guardado en localStorage
-                const savedUsername = localStorage.getItem('juegos_username');
-                if (savedUsername) {
-                    currentUsername = savedUsername;
-                    registerUser(savedUsername);
-                } else {
+                // Si no hay usuario guardado, mostrar el modal
+                if (!hasExistingUser) {
                     showUserModal();
                 }
             } else {
@@ -870,11 +908,8 @@
                 // Reintentar después de un delay
                 setTimeout(() => {
                     if (initSupabase()) {
-                        const savedUsername = localStorage.getItem('juegos_username');
-                        if (savedUsername) {
-                            currentUsername = savedUsername;
-                            registerUser(savedUsername);
-                        } else {
+                        // Si no hay usuario guardado, mostrar el modal
+                        if (!checkExistingUser()) {
                             showUserModal();
                         }
                     }
