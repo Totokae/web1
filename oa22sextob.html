@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análisis Exploratorio de Datos - Comparación de Grupos</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=OpenDyslexic:wght@400;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -355,6 +356,50 @@
             font-style: italic;
         }
 
+        .sync-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #95a5a6;
+        }
+
+        .sync-status.syncing {
+            color: #3498db;
+        }
+
+        .sync-status.success {
+            color: #2ecc71;
+        }
+
+        .sync-status.error {
+            color: #e74c3c;
+        }
+
+        .save-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            font-family: 'OpenDyslexic', sans-serif;
+            background: #2ecc71;
+            color: white;
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .save-btn:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 1200px) {
             .groups-container {
                 grid-template-columns: 1fr;
@@ -390,6 +435,8 @@
                 <p class="info-text">Modo: <span id="currentMode">Agregar Puntos</span></p>
                 <p class="formula">Fórmula: x = 10t + h</p>
                 <p class="info-text">Haz clic en un número en el diagrama de puntos para ver su descomposición en tallo y hojas</p>
+                <button class="save-btn" id="saveBtn">Guardar en Supabase</button>
+                <p class="sync-status" id="syncStatus"></p>
             </div>
         </div>
 
@@ -438,6 +485,25 @@
     </div>
 
     <script>
+        // Configuración de Supabase
+        const SUPABASE_URL = 'https://qkryjldoiandvrqqxszc.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_qP8lp3-rT-f_6svcadtaHQ_b_KoqnmY';
+        
+        // Inicializar cliente de Supabase (esperar a que el script cargue)
+        let supabaseClient = null;
+        
+        // Función para inicializar Supabase cuando el script esté cargado
+        function initSupabase() {
+            // El CDN expone supabase como supabaseSupabase en el formato UMD
+            const supabaseLib = window.supabaseSupabase || window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+            
+            if (supabaseLib && supabaseLib.createClient) {
+                supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+                return true;
+            }
+            return false;
+        }
+        
         // Estado de la aplicación
         let currentMode = 'add'; // 'add' o 'delete'
         const groupAData = [];
@@ -445,14 +511,181 @@
         const minValue = 0;
         const maxValue = 100;
         let highlightedNumber = null;
+        let currentSessionId = null;
 
         // Inicialización
-        function init() {
+        async function init() {
             setupNumberLines();
             setupModeButtons();
+            setupSaveButton();
+            
+            // Intentar inicializar Supabase
+            if (!initSupabase()) {
+                console.warn('Supabase no está disponible aún. Reintentando...');
+                // Reintentar después de un breve delay
+                setTimeout(() => {
+                    if (initSupabase()) {
+                        loadDataFromSupabase();
+                    }
+                }, 500);
+            } else {
+                await loadDataFromSupabase();
+            }
+            
             updateStemLeaf('A');
             updateStemLeaf('B');
             updateDataTable();
+        }
+
+        // Configurar botón de guardado
+        function setupSaveButton() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.addEventListener('click', async () => {
+                await saveDataToSupabase();
+            });
+        }
+
+        // Guardar datos en Supabase
+        async function saveDataToSupabase() {
+            const syncStatus = document.getElementById('syncStatus');
+            const saveBtn = document.getElementById('saveBtn');
+            
+            // Verificar que Supabase esté inicializado
+            if (!supabaseClient) {
+                if (!initSupabase()) {
+                    syncStatus.textContent = '✗ Error: Supabase no está disponible';
+                    syncStatus.className = 'sync-status error';
+                    return;
+                }
+            }
+            
+            try {
+                syncStatus.textContent = 'Guardando...';
+                syncStatus.className = 'sync-status syncing';
+                saveBtn.disabled = true;
+
+                const dataToSave = {
+                    group_a_data: JSON.stringify(groupAData),
+                    group_b_data: JSON.stringify(groupBData),
+                    updated_at: new Date().toISOString()
+                };
+
+                let result;
+                if (currentSessionId) {
+                    // Actualizar registro existente
+                    result = await supabaseClient
+                        .from('grupos_data')
+                        .update(dataToSave)
+                        .eq('id', currentSessionId)
+                        .select();
+                } else {
+                    // Crear nuevo registro
+                    result = await supabaseClient
+                        .from('grupos_data')
+                        .insert([{
+                            ...dataToSave,
+                            created_at: new Date().toISOString()
+                        }])
+                        .select();
+                }
+
+                if (result.error) {
+                    throw result.error;
+                }
+
+                if (result.data && result.data.length > 0) {
+                    currentSessionId = result.data[0].id;
+                }
+
+                syncStatus.textContent = '✓ Datos guardados correctamente';
+                syncStatus.className = 'sync-status success';
+                
+                setTimeout(() => {
+                    syncStatus.textContent = '';
+                    syncStatus.className = 'sync-status';
+                }, 3000);
+            } catch (error) {
+                console.error('Error guardando datos:', error);
+                syncStatus.textContent = `✗ Error: ${error.message}`;
+                syncStatus.className = 'sync-status error';
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Cargar datos desde Supabase
+        async function loadDataFromSupabase() {
+            const syncStatus = document.getElementById('syncStatus');
+            
+            // Verificar que Supabase esté inicializado
+            if (!supabaseClient) {
+                if (!initSupabase()) {
+                    console.warn('Supabase no está disponible para cargar datos');
+                    return;
+                }
+            }
+            
+            try {
+                syncStatus.textContent = 'Cargando datos...';
+                syncStatus.className = 'sync-status syncing';
+
+                // Obtener el registro más reciente
+                const result = await supabaseClient
+                    .from('grupos_data')
+                    .select('*')
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+
+                if (result.error) {
+                    throw result.error;
+                }
+
+                if (result.data && result.data.length > 0) {
+                    const data = result.data[0];
+                    currentSessionId = data.id;
+                    
+                    // Cargar datos de los grupos
+                    if (data.group_a_data) {
+                        const parsed = JSON.parse(data.group_a_data);
+                        groupAData.length = 0;
+                        groupAData.push(...parsed);
+                    }
+                    
+                    if (data.group_b_data) {
+                        const parsed = JSON.parse(data.group_b_data);
+                        groupBData.length = 0;
+                        groupBData.push(...parsed);
+                    }
+
+                    // Actualizar visualizaciones
+                    updateDotPlot('A');
+                    updateDotPlot('B');
+                    updateStemLeaf('A');
+                    updateStemLeaf('B');
+                    updateDataTable();
+
+                    syncStatus.textContent = '✓ Datos cargados correctamente';
+                    syncStatus.className = 'sync-status success';
+                    
+                    setTimeout(() => {
+                        syncStatus.textContent = '';
+                        syncStatus.className = 'sync-status';
+                    }, 3000);
+                } else {
+                    syncStatus.textContent = 'No hay datos guardados. Puedes empezar a agregar puntos.';
+                    syncStatus.className = 'sync-status';
+                }
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                syncStatus.textContent = `⚠ No se pudieron cargar los datos: ${error.message}`;
+                syncStatus.className = 'sync-status error';
+                
+                // Continuar sin datos guardados
+                setTimeout(() => {
+                    syncStatus.textContent = '';
+                    syncStatus.className = 'sync-status';
+                }, 5000);
+            }
         }
 
         // Configurar las rectas numéricas
@@ -513,6 +746,9 @@
                 
                 // Resaltar descomposición
                 highlightDecomposition(group, value);
+                
+                // Guardar automáticamente en Supabase (opcional)
+                // saveDataToSupabase();
             } else if (currentMode === 'delete') {
                 // Eliminar punto más cercano
                 if (data.length === 0) return;
@@ -526,6 +762,9 @@
                 updateStemLeaf(group);
                 updateDataTable();
                 clearHighlights(group);
+                
+                // Guardar automáticamente en Supabase (opcional)
+                // saveDataToSupabase();
             }
         }
 
@@ -574,6 +813,9 @@
                                 updateStemLeaf(group);
                                 updateDataTable();
                                 clearHighlights(group);
+                                
+                                // Guardar automáticamente en Supabase (opcional)
+                                // saveDataToSupabase();
                             }
                         } else {
                             highlightDecomposition(group, value);
