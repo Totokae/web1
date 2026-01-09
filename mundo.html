@@ -8,6 +8,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
             margin: 0;
@@ -198,6 +199,34 @@
             padding: 8px;
             border-radius: 5px;
             z-index: 10;
+        }
+
+        .interaction-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            background: rgba(76, 175, 80, 0.9);
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 20;
+            pointer-events: none;
+            animation: pulse 1.5s ease-in-out infinite;
+            border: 2px solid white;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1.05);
+            }
         }
     </style>
 </head>
@@ -396,8 +425,42 @@
             );
         };
 
+        // Componente Modal
+        const ObjectModal = ({ object, onClose }) => {
+            if (!object) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                        <div className="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold">Pizarra: {object.type}</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-white hover:text-gray-300 text-2xl font-bold"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                            <div className="whitespace-pre-wrap text-gray-800 font-mono">
+                                {object.content || '(Vacío)'}
+                            </div>
+                        </div>
+                        <div className="bg-gray-100 px-6 py-4 flex justify-end">
+                            <button
+                                onClick={onClose}
+                                className="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 transition"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // Componente GameCanvas
-        const GameCanvas = ({ playerData }) => {
+        const GameCanvas = ({ playerData, interactiveObjects }) => {
             const canvasRef = useRef(null);
             const animationFrameRef = useRef(null);
             const keysRef = useRef({});
@@ -412,14 +475,12 @@
                 speed: 3
             });
 
-            // Estado de la pizarra (objeto interactivo)
-            const [whiteboard] = useState({
-                x: 600,
-                y: 400,
-                width: 200,
-                height: 150,
-                color: '#ffffff'
-            });
+            // Estado para objeto cercano y modal
+            const [nearbyObject, setNearbyObject] = useState(null);
+            const [selectedObject, setSelectedObject] = useState(null);
+            const interactionRadius = 50; // Radio de interacción en píxeles
+            const OBJECT_WIDTH = 200;
+            const OBJECT_HEIGHT = 150;
 
             // Hook de multiplayer
             const { otherPlayers, onlineUsers, broadcastPosition } = useMultiplayer(playerData);
@@ -429,6 +490,11 @@
                 const handleKeyDown = (e) => {
                     keysRef.current[e.key.toLowerCase()] = true;
                     keysRef.current[e.code] = true;
+
+                    // Detectar tecla 'E' para interactuar
+                    if ((e.key === 'e' || e.key === 'E') && nearbyObject) {
+                        setSelectedObject(nearbyObject);
+                    }
                 };
 
                 const handleKeyUp = (e) => {
@@ -443,7 +509,38 @@
                     window.removeEventListener('keydown', handleKeyDown);
                     window.removeEventListener('keyup', handleKeyUp);
                 };
-            }, []);
+            }, [nearbyObject]);
+
+            // Calcular objeto cercano basado en distancia
+            useEffect(() => {
+                const checkNearbyObjects = () => {
+                    if (!interactiveObjects || interactiveObjects.length === 0) {
+                        setNearbyObject(null);
+                        return;
+                    }
+
+                    let closestObject = null;
+                    let minDistance = Infinity;
+
+                    interactiveObjects.forEach(obj => {
+                        // Calcular distancia entre jugador y centro del objeto
+                        const objCenterX = obj.position_x + OBJECT_WIDTH / 2;
+                        const objCenterY = obj.position_y + OBJECT_HEIGHT / 2;
+                        const dx = player.x - objCenterX;
+                        const dy = player.y - objCenterY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < interactionRadius && distance < minDistance) {
+                            minDistance = distance;
+                            closestObject = obj;
+                        }
+                    });
+
+                    setNearbyObject(closestObject);
+                };
+
+                checkNearbyObjects();
+            }, [player, interactiveObjects]);
 
             // Actualizar posición del jugador y broadcast
             useEffect(() => {
@@ -507,14 +604,29 @@
                     ctx.fillStyle = '#16213e';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    // Dibujar pizarra (rectángulo estático)
-                    ctx.fillStyle = whiteboard.color;
-                    ctx.fillRect(whiteboard.x, whiteboard.y, whiteboard.width, whiteboard.height);
-                    
-                    // Borde de la pizarra
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(whiteboard.x, whiteboard.y, whiteboard.width, whiteboard.height);
+                    // Dibujar objetos interactivos desde la base de datos
+                    if (interactiveObjects && interactiveObjects.length > 0) {
+                        interactiveObjects.forEach(obj => {
+                            // Dibujar rectángulo del objeto
+                            ctx.fillStyle = '#8B4513'; // Color marrón
+                            ctx.fillRect(obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT);
+                            
+                            // Borde del objeto (verde si está cerca)
+                            ctx.strokeStyle = nearbyObject && nearbyObject.id === obj.id ? '#4CAF50' : '#654321';
+                            ctx.lineWidth = nearbyObject && nearbyObject.id === obj.id ? 3 : 2;
+                            ctx.strokeRect(obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT);
+
+                            // Etiqueta del tipo de objeto
+                            ctx.fillStyle = 'white';
+                            ctx.font = '12px Courier New';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(
+                                obj.type || 'Objeto',
+                                obj.position_x + OBJECT_WIDTH / 2,
+                                obj.position_y + OBJECT_HEIGHT / 2
+                            );
+                        });
+                    }
 
                     // Dibujar otros jugadores
                     Object.values(otherPlayers).forEach(otherPlayer => {
@@ -570,14 +682,24 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, whiteboard, otherPlayers]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject]);
 
             return (
                 <div className="game-container">
                     <canvas ref={canvasRef}></canvas>
+                    {nearbyObject && (
+                        <div className="interaction-hint">
+                            Presiona E para interactuar
+                        </div>
+                    )}
                     <div className="ui-overlay">
                         <div>Posición: ({Math.round(player.x)}, {Math.round(player.y)})</div>
                         <div>Jugadores: {Object.keys(otherPlayers).length + 1}</div>
+                        {nearbyObject && (
+                            <div style={{ marginTop: '8px', color: '#4CAF50' }}>
+                                Cerca de: {nearbyObject.type}
+                            </div>
+                        )}
                     </div>
                     <div className="players-list">
                         <h3>En línea ({onlineUsers.length})</h3>
@@ -593,7 +715,16 @@
                     </div>
                     <div className="controls-hint">
                         <div>Controles: WASD o Flechas del teclado</div>
+                        {nearbyObject && (
+                            <div style={{ marginTop: '4px' }}>Presiona E para leer</div>
+                        )}
                     </div>
+                    {selectedObject && (
+                        <ObjectModal
+                            object={selectedObject}
+                            onClose={() => setSelectedObject(null)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -601,12 +732,50 @@
         // Componente principal App
         const App = () => {
             const [playerData, setPlayerData] = useState(null);
+            const [interactiveObjects, setInteractiveObjects] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            // Fetch de objetos interactivos desde Supabase
+            useEffect(() => {
+                const fetchInteractiveObjects = async () => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('interactive_objects')
+                            .select('*')
+                            .order('created_at', { ascending: true });
+
+                        if (error) {
+                            console.error('Error fetching interactive objects:', error);
+                        } else {
+                            setInteractiveObjects(data || []);
+                        }
+                    } catch (err) {
+                        console.error('Error:', err);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                fetchInteractiveObjects();
+            }, []);
 
             if (!playerData) {
                 return <JoinScreen onJoin={setPlayerData} />;
             }
 
-            return <GameCanvas playerData={playerData} />;
+            if (loading) {
+                return (
+                    <div className="join-screen">
+                        <div className="join-form">
+                            <h2 style={{ color: 'white', textAlign: 'center' }}>
+                                Cargando objetos...
+                            </h2>
+                        </div>
+                    </div>
+                );
+            }
+
+            return <GameCanvas playerData={playerData} interactiveObjects={interactiveObjects} />;
         };
 
         // Renderizar la aplicación
