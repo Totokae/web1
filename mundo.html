@@ -7,6 +7,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -27,6 +28,110 @@
             height: 100%;
         }
 
+        /* Pantalla de Ingreso */
+        .join-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .join-form {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .join-form h2 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: white;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .color-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+
+        .color-option.selected {
+            border-color: white;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .join-button {
+            width: 100%;
+            padding: 14px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: background 0.2s;
+        }
+
+        .join-button:hover {
+            background: #45a049;
+        }
+
+        .join-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        /* Game Container */
         .game-container {
             width: 100%;
             height: 100%;
@@ -50,6 +155,39 @@
             z-index: 10;
         }
 
+        .players-list {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            min-width: 200px;
+        }
+
+        .players-list h3 {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            padding: 4px;
+        }
+
+        .player-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 1px solid white;
+        }
+
         .controls-hint {
             position: absolute;
             bottom: 20px;
@@ -69,17 +207,207 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
+        // Configuración de Supabase
+        const SUPABASE_URL = 'https://qkryjldoiandvrqqxszc.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_qP8lp3-rT-f_6svcadtaHQ_b_KoqnmY';
+
+        // Inicializar Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Colores disponibles
+        const AVAILABLE_COLORS = [
+            '#4CAF50', // Verde
+            '#2196F3', // Azul
+            '#FF9800', // Naranja
+            '#F44336', // Rojo
+            '#9C27B0', // Púrpura
+            '#00BCD4', // Cyan
+            '#FFEB3B', // Amarillo
+            '#E91E63', // Rosa
+            '#795548', // Marrón
+            '#607D8B', // Azul gris
+            '#FF5722', // Naranja oscuro
+            '#3F51B5'  // Índigo
+        ];
+
+        // Hook useMultiplayer
+        const useMultiplayer = (playerData) => {
+            const channelRef = useRef(null);
+            const [otherPlayers, setOtherPlayers] = useState({});
+            const [onlineUsers, setOnlineUsers] = useState([]);
+            const lastBroadcastRef = useRef(0);
+            const throttleMs = 80; // Throttle de 80ms
+            const broadcastPositionRef = useRef(null);
+
+            useEffect(() => {
+                if (!playerData) return;
+
+                // Crear canal de Realtime
+                const channel = supabase.channel('classroom_1', {
+                    config: {
+                        broadcast: { self: true },
+                        presence: { key: playerData.userId }
+                    }
+                });
+
+                // Suscribirse a presencia (quién está online)
+                channel.on('presence', { event: 'sync' }, () => {
+                    const presenceState = channel.presenceState();
+                    const users = [];
+                    Object.keys(presenceState).forEach(userId => {
+                        const presences = presenceState[userId];
+                        if (presences && presences.length > 0) {
+                            const presence = presences[0];
+                            users.push({
+                                userId: userId,
+                                nickname: presence.nickname || 'Anónimo',
+                                color: presence.color || '#4CAF50'
+                            });
+                        }
+                    });
+                    setOnlineUsers(users);
+                });
+
+                // Suscribirse a broadcast (posiciones de otros jugadores)
+                channel.on('broadcast', { event: 'position' }, (payload) => {
+                    const { userId, x, y, color, nickname } = payload.payload;
+                    if (userId !== playerData.userId) {
+                        setOtherPlayers(prev => ({
+                            ...prev,
+                            [userId]: { x, y, color, nickname, userId }
+                        }));
+                    }
+                });
+
+                // Suscribirse al canal
+                channel.subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        // Enviar presencia inicial
+                        await channel.track({
+                            userId: playerData.userId,
+                            nickname: playerData.nickname,
+                            color: playerData.color,
+                            x: playerData.x || 400,
+                            y: playerData.y || 300
+                        });
+                    }
+                });
+
+                channelRef.current = channel;
+
+                // Función para enviar posición con throttle
+                broadcastPositionRef.current = (x, y) => {
+                    const now = Date.now();
+                    if (now - lastBroadcastRef.current < throttleMs) {
+                        return;
+                    }
+                    lastBroadcastRef.current = now;
+
+                    if (channel && playerData) {
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'position',
+                            payload: {
+                                userId: playerData.userId,
+                                x: Math.round(x),
+                                y: Math.round(y),
+                                color: playerData.color,
+                                nickname: playerData.nickname
+                            }
+                        });
+                    }
+                };
+
+                return () => {
+                    if (channelRef.current) {
+                        channelRef.current.unsubscribe();
+                        channelRef.current = null;
+                    }
+                    broadcastPositionRef.current = null;
+                };
+            }, [playerData]);
+
+            // Retornar función wrapper que siempre verifica el ref
+            const broadcastPosition = useCallback((x, y) => {
+                if (broadcastPositionRef.current) {
+                    broadcastPositionRef.current(x, y);
+                }
+            }, []);
+
+            return { otherPlayers, onlineUsers, broadcastPosition };
+        };
+
+        // Componente JoinScreen
+        const JoinScreen = ({ onJoin }) => {
+            const [nickname, setNickname] = useState('');
+            const [selectedColor, setSelectedColor] = useState(AVAILABLE_COLORS[0]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (nickname.trim()) {
+                    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    onJoin({
+                        userId,
+                        nickname: nickname.trim(),
+                        color: selectedColor
+                    });
+                }
+            };
+
+            return (
+                <div className="join-screen">
+                    <form className="join-form" onSubmit={handleSubmit}>
+                        <h2>Unirse al Aula Virtual</h2>
+                        <div className="form-group">
+                            <label htmlFor="nickname">Nickname:</label>
+                            <input
+                                id="nickname"
+                                type="text"
+                                value={nickname}
+                                onChange={(e) => setNickname(e.target.value)}
+                                placeholder="Ingresa tu nombre"
+                                maxLength={20}
+                                required
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Elige tu color:</label>
+                            <div className="color-picker">
+                                {AVAILABLE_COLORS.map((color) => (
+                                    <div
+                                        key={color}
+                                        className={`color-option ${selectedColor === color ? 'selected' : ''}`}
+                                        style={{ backgroundColor: color }}
+                                        onClick={() => setSelectedColor(color)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <button
+                            type="submit"
+                            className="join-button"
+                            disabled={!nickname.trim()}
+                        >
+                            Entrar al Aula
+                        </button>
+                    </form>
+                </div>
+            );
+        };
+
         // Componente GameCanvas
-        const GameCanvas = () => {
+        const GameCanvas = ({ playerData }) => {
             const canvasRef = useRef(null);
             const animationFrameRef = useRef(null);
             const keysRef = useRef({});
             
-            // Estado del jugador
+            // Estado del jugador local
             const [player, setPlayer] = useState({
                 x: 400,
                 y: 300,
-                color: '#4CAF50',
+                color: playerData.color,
+                nickname: playerData.nickname,
                 radius: 15,
                 speed: 3
             });
@@ -92,6 +420,9 @@
                 height: 150,
                 color: '#ffffff'
             });
+
+            // Hook de multiplayer
+            const { otherPlayers, onlineUsers, broadcastPosition } = useMultiplayer(playerData);
 
             // Manejo de teclado
             useEffect(() => {
@@ -114,7 +445,7 @@
                 };
             }, []);
 
-            // Actualizar posición del jugador
+            // Actualizar posición del jugador y broadcast
             useEffect(() => {
                 const updatePlayerPosition = () => {
                     setPlayer(prev => {
@@ -142,6 +473,9 @@
                             newX = Math.max(prev.radius, Math.min(canvas.width - prev.radius, newX));
                             newY = Math.max(prev.radius, Math.min(canvas.height - prev.radius, newY));
                         }
+
+                        // Broadcast posición con throttle (manejado en el hook)
+                        broadcastPosition(newX, newY);
 
                         return { ...prev, x: newX, y: newY };
                     });
@@ -182,14 +516,47 @@
                     ctx.lineWidth = 2;
                     ctx.strokeRect(whiteboard.x, whiteboard.y, whiteboard.width, whiteboard.height);
 
-                    // Dibujar jugador (círculo)
+                    // Dibujar otros jugadores
+                    Object.values(otherPlayers).forEach(otherPlayer => {
+                        ctx.beginPath();
+                        ctx.arc(otherPlayer.x, otherPlayer.y, player.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = otherPlayer.color;
+                        ctx.fill();
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        // Dibujar nickname sobre el jugador
+                        if (otherPlayer.nickname) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '12px Courier New';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(
+                                otherPlayer.nickname,
+                                otherPlayer.x,
+                                otherPlayer.y - player.radius - 8
+                            );
+                        }
+                    });
+
+                    // Dibujar jugador local (círculo)
                     ctx.beginPath();
                     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
                     ctx.fillStyle = player.color;
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 3;
                     ctx.stroke();
+
+                    // Dibujar nickname del jugador local
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        player.nickname,
+                        player.x,
+                        player.y - player.radius - 8
+                    );
 
                     // Siguiente frame
                     animationFrameRef.current = requestAnimationFrame(gameLoop);
@@ -203,13 +570,26 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, whiteboard]);
+            }, [player, whiteboard, otherPlayers]);
 
             return (
                 <div className="game-container">
                     <canvas ref={canvasRef}></canvas>
                     <div className="ui-overlay">
                         <div>Posición: ({Math.round(player.x)}, {Math.round(player.y)})</div>
+                        <div>Jugadores: {Object.keys(otherPlayers).length + 1}</div>
+                    </div>
+                    <div className="players-list">
+                        <h3>En línea ({onlineUsers.length})</h3>
+                        {onlineUsers.map(user => (
+                            <div key={user.userId} className="player-item">
+                                <div
+                                    className="player-color-dot"
+                                    style={{ backgroundColor: user.color }}
+                                />
+                                <span>{user.nickname}</span>
+                            </div>
+                        ))}
                     </div>
                     <div className="controls-hint">
                         <div>Controles: WASD o Flechas del teclado</div>
@@ -218,10 +598,20 @@
             );
         };
 
+        // Componente principal App
+        const App = () => {
+            const [playerData, setPlayerData] = useState(null);
+
+            if (!playerData) {
+                return <JoinScreen onJoin={setPlayerData} />;
+            }
+
+            return <GameCanvas playerData={playerData} />;
+        };
+
         // Renderizar la aplicación
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<GameCanvas />);
+        root.render(<App />);
     </script>
 </body>
 </html>
-
