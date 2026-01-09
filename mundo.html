@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mundo Virtual - Aula</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Courier New', monospace;
+        }
+
+        #root {
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            background: #16213e;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // Componente GameCanvas
+        const GameCanvas = () => {
+            const canvasRef = useRef(null);
+            const animationFrameRef = useRef(null);
+            const keysRef = useRef({});
+            
+            // Estado del jugador
+            const [player, setPlayer] = useState({
+                x: 400,
+                y: 300,
+                color: '#4CAF50',
+                radius: 15,
+                speed: 3
+            });
+
+            // Estado de la pizarra (objeto interactivo)
+            const [whiteboard] = useState({
+                x: 600,
+                y: 400,
+                width: 200,
+                height: 150,
+                color: '#ffffff'
+            });
+
+            // Manejo de teclado
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    keysRef.current[e.key.toLowerCase()] = true;
+                    keysRef.current[e.code] = true;
+                };
+
+                const handleKeyUp = (e) => {
+                    keysRef.current[e.key.toLowerCase()] = false;
+                    keysRef.current[e.code] = false;
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                window.addEventListener('keyup', handleKeyUp);
+
+                return () => {
+                    window.removeEventListener('keydown', handleKeyDown);
+                    window.removeEventListener('keyup', handleKeyUp);
+                };
+            }, []);
+
+            // Actualizar posición del jugador
+            useEffect(() => {
+                const updatePlayerPosition = () => {
+                    setPlayer(prev => {
+                        let newX = prev.x;
+                        let newY = prev.y;
+                        const keys = keysRef.current;
+
+                        // Movimiento: WASD o flechas
+                        if (keys['w'] || keys['ArrowUp']) {
+                            newY -= prev.speed;
+                        }
+                        if (keys['s'] || keys['ArrowDown']) {
+                            newY += prev.speed;
+                        }
+                        if (keys['a'] || keys['ArrowLeft']) {
+                            newX -= prev.speed;
+                        }
+                        if (keys['d'] || keys['ArrowRight']) {
+                            newX += prev.speed;
+                        }
+
+                        // Limitar movimiento dentro del canvas
+                        const canvas = canvasRef.current;
+                        if (canvas) {
+                            newX = Math.max(prev.radius, Math.min(canvas.width - prev.radius, newX));
+                            newY = Math.max(prev.radius, Math.min(canvas.height - prev.radius, newY));
+                        }
+
+                        return { ...prev, x: newX, y: newY };
+                    });
+                };
+
+                const interval = setInterval(updatePlayerPosition, 16); // ~60 FPS
+
+                return () => clearInterval(interval);
+            }, []);
+
+            // Game loop - renderizado
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                
+                // Ajustar tamaño del canvas
+                const resizeCanvas = () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                };
+
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                const gameLoop = () => {
+                    // Limpiar canvas
+                    ctx.fillStyle = '#16213e';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Dibujar pizarra (rectángulo estático)
+                    ctx.fillStyle = whiteboard.color;
+                    ctx.fillRect(whiteboard.x, whiteboard.y, whiteboard.width, whiteboard.height);
+                    
+                    // Borde de la pizarra
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(whiteboard.x, whiteboard.y, whiteboard.width, whiteboard.height);
+
+                    // Dibujar jugador (círculo)
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = player.color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Siguiente frame
+                    animationFrameRef.current = requestAnimationFrame(gameLoop);
+                };
+
+                gameLoop();
+
+                return () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                    if (animationFrameRef.current) {
+                        cancelAnimationFrame(animationFrameRef.current);
+                    }
+                };
+            }, [player, whiteboard]);
+
+            return (
+                <div className="game-container">
+                    <canvas ref={canvasRef}></canvas>
+                    <div className="ui-overlay">
+                        <div>Posición: ({Math.round(player.x)}, {Math.round(player.y)})</div>
+                    </div>
+                    <div className="controls-hint">
+                        <div>Controles: WASD o Flechas del teclado</div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Renderizar la aplicación
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GameCanvas />);
+    </script>
+</body>
+</html>
+
