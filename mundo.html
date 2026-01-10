@@ -201,6 +201,32 @@
             z-index: 10;
         }
 
+        .admin-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 15;
+            padding: 8px 16px;
+            background: rgba(55, 65, 81, 0.9);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+        .admin-button:hover {
+            background: rgba(75, 85, 99, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .admin-button.admin-active {
+            background: rgba(34, 197, 94, 0.9);
+            border-color: rgba(34, 197, 94, 1);
+        }
+
         .interaction-hint {
             position: absolute;
             top: 50%;
@@ -425,15 +451,178 @@
             );
         };
 
+        // Componente AdminLogin
+        const AdminLogin = ({ isAdmin, onLoginSuccess, onLogout }) => {
+            const [showLogin, setShowLogin] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+
+                try {
+                    const { data, error: authError } = await supabase.auth.signInWithPassword({
+                        email: email.trim(),
+                        password: password
+                    });
+
+                    if (authError) {
+                        setError(authError.message);
+                    } else {
+                        onLoginSuccess();
+                        setShowLogin(false);
+                        setEmail('');
+                        setPassword('');
+                    }
+                } catch (err) {
+                    setError('Error al iniciar sesión');
+                    console.error(err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleLogout = async () => {
+                await supabase.auth.signOut();
+                onLogout();
+            };
+
+            if (isAdmin) {
+                return (
+                    <>
+                        <button
+                            className="admin-button admin-active"
+                            onClick={handleLogout}
+                            title="Cerrar sesión de admin"
+                        >
+                            Admin: Conectado
+                        </button>
+                    </>
+                );
+            }
+
+            return (
+                <>
+                    <button
+                        className="admin-button"
+                        onClick={() => setShowLogin(!showLogin)}
+                    >
+                        Admin Login
+                    </button>
+                    {showLogin && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                                <div className="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold">Login de Admin</h2>
+                                    <button
+                                        onClick={() => {
+                                            setShowLogin(false);
+                                            setError('');
+                                        }}
+                                        className="text-white hover:text-gray-300 text-2xl font-bold"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                                <form onSubmit={handleLogin} className="p-6">
+                                    {error && (
+                                        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                                            {error}
+                                        </div>
+                                    )}
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 text-sm font-bold mb-2">
+                                            Email:
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-gray-800"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-gray-700 text-sm font-bold mb-2">
+                                            Contraseña:
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-gray-800"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowLogin(false);
+                                                setError('');
+                                            }}
+                                            className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition"
+                                            disabled={loading}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition"
+                                            disabled={loading}
+                                        >
+                                            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
+        };
+
         // Componente Modal
-        const ObjectModal = ({ object, onClose }) => {
+        const ObjectModal = ({ object, onClose, isAdmin, onSave }) => {
+            const [content, setContent] = useState(object?.content || '');
+            const [saving, setSaving] = useState(false);
+
+            useEffect(() => {
+                if (object) {
+                    setContent(object.content || '');
+                }
+            }, [object]);
+
             if (!object) return null;
+
+            const handleSave = async () => {
+                if (!isAdmin) return;
+                
+                setSaving(true);
+                try {
+                    await onSave(object.id, content);
+                    onClose();
+                } catch (error) {
+                    console.error('Error al guardar:', error);
+                    alert('Error al guardar los cambios');
+                } finally {
+                    setSaving(false);
+                }
+            };
 
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
                         <div className="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Pizarra: {object.type}</h2>
+                            <h2 className="text-xl font-bold">
+                                Pizarra: {object.type}
+                                {isAdmin && <span className="ml-2 text-sm text-green-300">(Modo Edición)</span>}
+                            </h2>
                             <button
                                 onClick={onClose}
                                 className="text-white hover:text-gray-300 text-2xl font-bold"
@@ -442,17 +631,35 @@
                             </button>
                         </div>
                         <div className="p-6 overflow-y-auto flex-1">
-                            <div className="whitespace-pre-wrap text-gray-800 font-mono">
-                                {object.content || '(Vacío)'}
-                            </div>
+                            {isAdmin ? (
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    className="w-full h-full p-4 border border-gray-300 rounded font-mono text-sm focus:outline-none focus:border-gray-800 resize-none"
+                                    placeholder="Escribe el contenido de la pizarra aquí..."
+                                />
+                            ) : (
+                                <div className="whitespace-pre-wrap text-gray-800 font-mono">
+                                    {object.content || '(Vacío)'}
+                                </div>
+                            )}
                         </div>
-                        <div className="bg-gray-100 px-6 py-4 flex justify-end">
+                        <div className="bg-gray-100 px-6 py-4 flex justify-between">
                             <button
                                 onClick={onClose}
-                                className="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 transition"
+                                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-200 transition"
                             >
                                 Cerrar
                             </button>
+                            {isAdmin && (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -460,7 +667,7 @@
         };
 
         // Componente GameCanvas
-        const GameCanvas = ({ playerData, interactiveObjects }) => {
+        const GameCanvas = ({ playerData, interactiveObjects, isAdmin, onSaveObject }) => {
             const canvasRef = useRef(null);
             const animationFrameRef = useRef(null);
             const keysRef = useRef({});
@@ -478,9 +685,21 @@
             // Estado para objeto cercano y modal
             const [nearbyObject, setNearbyObject] = useState(null);
             const [selectedObject, setSelectedObject] = useState(null);
+            const selectedObjectRef = useRef(null);
             const interactionRadius = 50; // Radio de interacción en píxeles
             const OBJECT_WIDTH = 200;
             const OBJECT_HEIGHT = 150;
+
+            // Actualizar objeto seleccionado cuando cambie desde Realtime
+            useEffect(() => {
+                if (selectedObject && interactiveObjects) {
+                    const updatedObject = interactiveObjects.find(obj => obj.id === selectedObject.id);
+                    if (updatedObject) {
+                        setSelectedObject(updatedObject);
+                        selectedObjectRef.current = updatedObject;
+                    }
+                }
+            }, [interactiveObjects]);
 
             // Hook de multiplayer
             const { otherPlayers, onlineUsers, broadcastPosition } = useMultiplayer(playerData);
@@ -493,7 +712,15 @@
 
                     // Detectar tecla 'E' para interactuar
                     if ((e.key === 'e' || e.key === 'E') && nearbyObject) {
-                        setSelectedObject(nearbyObject);
+                        // Buscar el objeto actualizado en la lista
+                        const currentObject = interactiveObjects.find(obj => obj.id === nearbyObject.id);
+                        if (currentObject) {
+                            setSelectedObject(currentObject);
+                            selectedObjectRef.current = currentObject;
+                        } else {
+                            setSelectedObject(nearbyObject);
+                            selectedObjectRef.current = nearbyObject;
+                        }
                     }
                 };
 
@@ -700,6 +927,11 @@
                                 Cerca de: {nearbyObject.type}
                             </div>
                         )}
+                        {isAdmin && (
+                            <div style={{ marginTop: '8px', color: '#22c55e', fontWeight: 'bold' }}>
+                                ⚡ Modo Admin Activo
+                            </div>
+                        )}
                     </div>
                     <div className="players-list">
                         <h3>En línea ({onlineUsers.length})</h3>
@@ -716,15 +948,23 @@
                     <div className="controls-hint">
                         <div>Controles: WASD o Flechas del teclado</div>
                         {nearbyObject && (
-                            <div style={{ marginTop: '4px' }}>Presiona E para leer</div>
+                            <div style={{ marginTop: '4px' }}>
+                                Presiona E para {isAdmin ? 'editar' : 'leer'}
+                            </div>
                         )}
                     </div>
-                    {selectedObject && (
-                        <ObjectModal
-                            object={selectedObject}
-                            onClose={() => setSelectedObject(null)}
-                        />
-                    )}
+                    {selectedObject && (() => {
+                        // Buscar el objeto actualizado en la lista para tener siempre la versión más reciente
+                        const currentObject = interactiveObjects.find(obj => obj.id === selectedObject.id) || selectedObject;
+                        return (
+                            <ObjectModal
+                                object={currentObject}
+                                onClose={() => setSelectedObject(null)}
+                                isAdmin={isAdmin}
+                                onSave={onSaveObject}
+                            />
+                        );
+                    })()}
                 </div>
             );
         };
@@ -734,6 +974,25 @@
             const [playerData, setPlayerData] = useState(null);
             const [interactiveObjects, setInteractiveObjects] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [isAdmin, setIsAdmin] = useState(false);
+            const channelRef = useRef(null);
+
+            // Verificar sesión de admin al cargar
+            useEffect(() => {
+                const checkSession = async () => {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        setIsAdmin(true);
+                    }
+
+                    // Escuchar cambios en la autenticación
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        setIsAdmin(!!session);
+                    });
+                };
+
+                checkSession();
+            }, []);
 
             // Fetch de objetos interactivos desde Supabase
             useEffect(() => {
@@ -759,23 +1018,150 @@
                 fetchInteractiveObjects();
             }, []);
 
+            // Suscribirse a cambios en tiempo real de interactive_objects
+            useEffect(() => {
+                // Limpiar suscripción anterior si existe
+                if (channelRef.current) {
+                    supabase.removeChannel(channelRef.current);
+                }
+
+                // Crear canal para cambios de la tabla
+                const channel = supabase
+                    .channel('interactive_objects_changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'interactive_objects'
+                        },
+                        (payload) => {
+                            console.log('Cambio detectado en objeto:', payload);
+                            // Actualizar el objeto específico en el estado
+                            setInteractiveObjects(prev => 
+                                prev.map(obj => 
+                                    obj.id === payload.new.id 
+                                        ? { ...obj, ...payload.new }
+                                        : obj
+                                )
+                            );
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'interactive_objects'
+                        },
+                        (payload) => {
+                            console.log('Nuevo objeto insertado:', payload);
+                            setInteractiveObjects(prev => [...prev, payload.new]);
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'DELETE',
+                            schema: 'public',
+                            table: 'interactive_objects'
+                        },
+                        (payload) => {
+                            console.log('Objeto eliminado:', payload);
+                            setInteractiveObjects(prev => 
+                                prev.filter(obj => obj.id !== payload.old.id)
+                            );
+                        }
+                    )
+                    .subscribe();
+
+                channelRef.current = channel;
+
+                return () => {
+                    if (channelRef.current) {
+                        supabase.removeChannel(channelRef.current);
+                        channelRef.current = null;
+                    }
+                };
+            }, []);
+
+            // Función para guardar cambios en un objeto
+            const handleSaveObject = async (objectId, newContent) => {
+                try {
+                    const { data, error } = await supabase
+                        .from('interactive_objects')
+                        .update({ content: newContent })
+                        .eq('id', objectId)
+                        .select()
+                        .single();
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    // El cambio se propagará automáticamente vía Realtime
+                    console.log('Objeto actualizado exitosamente:', data);
+                } catch (error) {
+                    console.error('Error al actualizar objeto:', error);
+                    throw error;
+                }
+            };
+
+            const handleLoginSuccess = () => {
+                setIsAdmin(true);
+            };
+
+            const handleLogout = () => {
+                setIsAdmin(false);
+            };
+
             if (!playerData) {
-                return <JoinScreen onJoin={setPlayerData} />;
+                return (
+                    <>
+                        <AdminLogin 
+                            isAdmin={isAdmin} 
+                            onLoginSuccess={handleLoginSuccess}
+                            onLogout={handleLogout}
+                        />
+                        <JoinScreen onJoin={setPlayerData} />
+                    </>
+                );
             }
 
             if (loading) {
                 return (
-                    <div className="join-screen">
-                        <div className="join-form">
-                            <h2 style={{ color: 'white', textAlign: 'center' }}>
-                                Cargando objetos...
-                            </h2>
+                    <>
+                        <AdminLogin 
+                            isAdmin={isAdmin} 
+                            onLoginSuccess={handleLoginSuccess}
+                            onLogout={handleLogout}
+                        />
+                        <div className="join-screen">
+                            <div className="join-form">
+                                <h2 style={{ color: 'white', textAlign: 'center' }}>
+                                    Cargando objetos...
+                                </h2>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 );
             }
 
-            return <GameCanvas playerData={playerData} interactiveObjects={interactiveObjects} />;
+            return (
+                <>
+                    <AdminLogin 
+                        isAdmin={isAdmin} 
+                        onLoginSuccess={handleLoginSuccess}
+                        onLogout={handleLogout}
+                    />
+                    <GameCanvas 
+                        playerData={playerData} 
+                        interactiveObjects={interactiveObjects}
+                        isAdmin={isAdmin}
+                        onSaveObject={handleSaveObject}
+                    />
+                </>
+            );
         };
 
         // Renderizar la aplicación
