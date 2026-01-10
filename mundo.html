@@ -227,6 +227,49 @@
             border-color: rgba(34, 197, 94, 1);
         }
 
+        .reactions-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 15;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .reaction-button {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reaction-button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .reaction-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .reaction-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
         .interaction-hint {
             position: absolute;
             top: 50%;
@@ -285,8 +328,17 @@
             '#3F51B5'  // Índigo
         ];
 
+        // Mensajes predefinidos
+        const PRESET_MESSAGES = [
+            { id: 'hello', text: 'Hola', color: '#FFFFFF' },
+            { id: 'not_understood', text: 'No entendí', color: '#F44336' },
+            { id: 'understood', text: 'Ahora entiendo', color: '#4CAF50' },
+            { id: 'confused', text: 'Estoy confundido', color: '#FF9800' },
+            { id: 'question', text: 'Tengo una duda', color: '#FFFFFF' }
+        ];
+
         // Hook useMultiplayer
-        const useMultiplayer = (playerData) => {
+        const useMultiplayer = (playerData, onMessageReceived) => {
             const channelRef = useRef(null);
             const [otherPlayers, setOtherPlayers] = useState({});
             const [onlineUsers, setOnlineUsers] = useState([]);
@@ -331,6 +383,14 @@
                             ...prev,
                             [userId]: { x, y, color, nickname, userId }
                         }));
+                    }
+                });
+
+                // Suscribirse a broadcast (mensajes/reacciones)
+                channel.on('broadcast', { event: 'message' }, (payload) => {
+                    const { userId, messageType, content } = payload.payload;
+                    if (onMessageReceived) {
+                        onMessageReceived({ userId, messageType, content });
                     }
                 });
 
@@ -389,7 +449,22 @@
                 }
             }, []);
 
-            return { otherPlayers, onlineUsers, broadcastPosition };
+            // Función para enviar mensaje
+            const broadcastMessage = useCallback((messageType, content) => {
+                if (channelRef.current && playerData) {
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'message',
+                        payload: {
+                            userId: playerData.userId,
+                            messageType: messageType,
+                            content: content
+                        }
+                    });
+                }
+            }, [playerData]);
+
+            return { otherPlayers, onlineUsers, broadcastPosition, broadcastMessage };
         };
 
         // Componente JoinScreen
@@ -666,6 +741,24 @@
             );
         };
 
+        // Componente ReactionsBar
+        const ReactionsBar = ({ onSendMessage, cooldownActive }) => {
+            return (
+                <div className="reactions-bar">
+                    {PRESET_MESSAGES.map(msg => (
+                        <button
+                            key={msg.id}
+                            className="reaction-button"
+                            onClick={() => onSendMessage(msg.id, msg.text)}
+                            disabled={cooldownActive}
+                        >
+                            {msg.text}
+                        </button>
+                    ))}
+                </div>
+            );
+        };
+
         // Componente GameCanvas
         const GameCanvas = ({ playerData, interactiveObjects, isAdmin, onSaveObject }) => {
             const canvasRef = useRef(null);
@@ -682,6 +775,11 @@
                 speed: 3
             });
 
+            // Estado para mensajes activos (animaciones)
+            const [activeMessages, setActiveMessages] = useState([]);
+            const [cooldownActive, setCooldownActive] = useState(false);
+            const lastMessageTimeRef = useRef(0);
+
             // Estado para objeto cercano y modal
             const [nearbyObject, setNearbyObject] = useState(null);
             const [selectedObject, setSelectedObject] = useState(null);
@@ -689,6 +787,46 @@
             const interactionRadius = 50; // Radio de interacción en píxeles
             const OBJECT_WIDTH = 200;
             const OBJECT_HEIGHT = 150;
+
+            // Función para enviar mensaje con cooldown
+            const handleSendMessage = useCallback((messageType, content) => {
+                const now = Date.now();
+                const cooldownMs = 2000; // 2 segundos
+
+                if (now - lastMessageTimeRef.current < cooldownMs) {
+                    return;
+                }
+
+                lastMessageTimeRef.current = now;
+                setCooldownActive(true);
+
+                // Enviar mensaje
+                broadcastMessage(messageType, content);
+
+                // Crear mensaje local inmediatamente
+                const presetMsg = PRESET_MESSAGES.find(m => m.id === messageType);
+                const messageColor = presetMsg ? presetMsg.color : '#FFFFFF';
+                const messageId = `${playerData.userId}_${Date.now()}`;
+                const newMessage = {
+                    id: messageId,
+                    userId: playerData.userId,
+                    content: content,
+                    color: messageColor,
+                    startTime: Date.now()
+                };
+
+                setActiveMessages(prev => [...prev, newMessage]);
+
+                // Eliminar mensaje después de 4 segundos
+                setTimeout(() => {
+                    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
+                }, 4000);
+
+                // Liberar cooldown después de 2 segundos
+                setTimeout(() => {
+                    setCooldownActive(false);
+                }, cooldownMs);
+            }, [broadcastMessage, playerData.userId, player.x, player.y, player.radius]);
 
             // Actualizar objeto seleccionado cuando cambie desde Realtime
             useEffect(() => {
@@ -701,8 +839,31 @@
                 }
             }, [interactiveObjects]);
 
+            // Handler para recibir mensajes
+            const handleMessageReceived = useCallback(({ userId, messageType, content }) => {
+                const presetMsg = PRESET_MESSAGES.find(m => m.id === messageType || m.text === content);
+                const messageColor = presetMsg ? presetMsg.color : '#FFFFFF';
+                
+                // Crear mensaje animado
+                const messageId = `${userId}_${Date.now()}`;
+                const newMessage = {
+                    id: messageId,
+                    userId: userId,
+                    content: content,
+                    color: messageColor,
+                    startTime: Date.now()
+                };
+                
+                setActiveMessages(prev => [...prev, newMessage]);
+                
+                // Eliminar mensaje después de 4 segundos
+                setTimeout(() => {
+                    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
+                }, 4000);
+            }, []);
+
             // Hook de multiplayer
-            const { otherPlayers, onlineUsers, broadcastPosition } = useMultiplayer(playerData);
+            const { otherPlayers, onlineUsers, broadcastPosition, broadcastMessage } = useMultiplayer(playerData, handleMessageReceived);
 
             // Manejo de teclado
             useEffect(() => {
@@ -897,6 +1058,87 @@
                         player.y - player.radius - 8
                     );
 
+                    // Dibujar mensajes/reacciones animadas
+                    const now = Date.now();
+                    activeMessages.forEach(message => {
+                        // Calcular posición del jugador asociado (se actualiza en cada frame)
+                        let playerX, playerY, playerRadius;
+                        if (message.userId === playerData.userId) {
+                            // Mensaje del jugador local
+                            playerX = player.x;
+                            playerY = player.y;
+                            playerRadius = player.radius;
+                        } else {
+                            // Mensaje de otro jugador
+                            const otherPlayer = otherPlayers[message.userId];
+                            if (!otherPlayer) return; // Si el jugador ya no está, no dibujar
+                            playerX = otherPlayer.x;
+                            playerY = otherPlayer.y;
+                            playerRadius = player.radius; // Usar el mismo radio que el jugador local
+                        }
+
+                        // Calcular tiempo transcurrido y animación
+                        const elapsed = now - message.startTime;
+                        const duration = 4000; // 4 segundos
+                        const progress = Math.min(elapsed / duration, 1);
+                        
+                        // Animación: flotar hacia arriba y desvanecerse
+                        const floatDistance = 40;
+                        const offsetY = -floatDistance * progress;
+                        const opacity = 1 - progress;
+
+                        if (opacity <= 0) return;
+
+                        // Calcular posición inicial (arriba del jugador)
+                        let finalX = playerX;
+                        let finalY = playerY - playerRadius - 20 + offsetY;
+
+                        // Boundary checks - ajustar posición para que no se salga del canvas
+                        ctx.font = '14px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const textMetrics = ctx.measureText(message.content);
+                        const textWidth = textMetrics.width;
+                        const textHeight = 16;
+                        const textPadding = 10;
+                        const bgPadding = 6;
+
+                        // Ajustar horizontalmente si está cerca del borde
+                        if (finalX - textWidth / 2 - bgPadding < textPadding) {
+                            finalX = textWidth / 2 + bgPadding + textPadding;
+                        } else if (finalX + textWidth / 2 + bgPadding > canvas.width - textPadding) {
+                            finalX = canvas.width - textWidth / 2 - bgPadding - textPadding;
+                        }
+
+                        // Ajustar verticalmente si está cerca del borde superior
+                        if (finalY - textHeight / 2 - bgPadding < textPadding) {
+                            // Dibujar debajo del jugador si está muy arriba
+                            finalY = playerY + playerRadius + 20 + Math.abs(offsetY);
+                        } else if (finalY + textHeight / 2 + bgPadding > canvas.height - textPadding) {
+                            finalY = canvas.height - textHeight / 2 - bgPadding - textPadding;
+                        }
+
+                        // Dibujar fondo semitransparente para legibilidad
+                        ctx.fillStyle = `rgba(0, 0, 0, ${0.6 * opacity})`;
+                        ctx.fillRect(
+                            finalX - textWidth / 2 - bgPadding,
+                            finalY - textHeight / 2 - bgPadding,
+                            textWidth + bgPadding * 2,
+                            textHeight + bgPadding * 2
+                        );
+
+                        // Borde del texto (negro) para legibilidad
+                        ctx.strokeStyle = `rgba(0, 0, 0, ${0.8 * opacity})`;
+                        ctx.lineWidth = 3;
+                        ctx.strokeText(message.content, finalX, finalY);
+                        
+                        // Texto principal (con color según tipo)
+                        ctx.fillStyle = message.color;
+                        ctx.globalAlpha = opacity;
+                        ctx.fillText(message.content, finalX, finalY);
+                        ctx.globalAlpha = 1;
+                    });
+
                     // Siguiente frame
                     animationFrameRef.current = requestAnimationFrame(gameLoop);
                 };
@@ -909,7 +1151,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId]);
 
             return (
                 <div className="game-container">
@@ -965,6 +1207,10 @@
                             />
                         );
                     })()}
+                    <ReactionsBar 
+                        onSendMessage={handleSendMessage}
+                        cooldownActive={cooldownActive}
+                    />
                 </div>
             );
         };
