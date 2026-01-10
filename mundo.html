@@ -788,6 +788,85 @@
             const OBJECT_WIDTH = 200;
             const OBJECT_HEIGHT = 150;
 
+            // Mobiliario hardcoded (obstáculos sólidos)
+            // Escritorio del profesor: cerca de la pizarra
+            // Mesas de alumnos: distribuidas en el aula
+            // Usar useMemo para evitar recrear el array en cada render
+            const furniture = React.useMemo(() => [
+                // Escritorio del profesor (cerca de la pizarra)
+                { x: 100, y: 100, width: 120, height: 80, type: 'desk', label: 'Escritorio Profesor' },
+                // Mesas de alumnos (distribuidas)
+                { x: 300, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
+                { x: 450, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
+                { x: 600, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
+                { x: 300, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
+                { x: 450, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
+                { x: 600, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' }
+            ], []);
+
+            // Función para dibujar el grid del suelo
+            const drawGrid = (ctx, canvasWidth, canvasHeight) => {
+                const gridSize = 40; // Tamaño de cada celda del grid
+                ctx.strokeStyle = 'rgba(200, 200, 220, 0.15)'; // Gris muy claro, casi transparente
+                ctx.lineWidth = 1;
+
+                // Líneas verticales
+                for (let x = 0; x <= canvasWidth; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvasHeight);
+                    ctx.stroke();
+                }
+
+                // Líneas horizontales
+                for (let y = 0; y <= canvasHeight; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvasWidth, y);
+                    ctx.stroke();
+                }
+            };
+
+            // Función para verificar colisión entre círculo (jugador) y rectángulo (objeto/mueble)
+            const checkCollision = (playerX, playerY, playerRadius, rectX, rectY, rectWidth, rectHeight) => {
+                // Encontrar el punto más cercano en el rectángulo al centro del círculo
+                const closestX = Math.max(rectX, Math.min(playerX, rectX + rectWidth));
+                const closestY = Math.max(rectY, Math.min(playerY, rectY + rectHeight));
+
+                // Calcular distancia entre el centro del círculo y el punto más cercano
+                const dx = playerX - closestX;
+                const dy = playerY - closestY;
+
+                // Si la distancia es menor que el radio, hay colisión
+                return (dx * dx + dy * dy) < (playerRadius * playerRadius);
+            };
+
+            // Handler para recibir mensajes
+            const handleMessageReceived = useCallback(({ userId, messageType, content }) => {
+                const presetMsg = PRESET_MESSAGES.find(m => m.id === messageType || m.text === content);
+                const messageColor = presetMsg ? presetMsg.color : '#FFFFFF';
+                
+                // Crear mensaje animado
+                const messageId = `${userId}_${Date.now()}`;
+                const newMessage = {
+                    id: messageId,
+                    userId: userId,
+                    content: content,
+                    color: messageColor,
+                    startTime: Date.now()
+                };
+                
+                setActiveMessages(prev => [...prev, newMessage]);
+                
+                // Eliminar mensaje después de 4 segundos
+                setTimeout(() => {
+                    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
+                }, 4000);
+            }, []);
+
+            // Hook de multiplayer (debe estar antes de handleSendMessage)
+            const { otherPlayers, onlineUsers, broadcastPosition, broadcastMessage } = useMultiplayer(playerData, handleMessageReceived);
+
             // Función para enviar mensaje con cooldown
             const handleSendMessage = useCallback((messageType, content) => {
                 const now = Date.now();
@@ -826,7 +905,7 @@
                 setTimeout(() => {
                     setCooldownActive(false);
                 }, cooldownMs);
-            }, [broadcastMessage, playerData.userId, player.x, player.y, player.radius]);
+            }, [broadcastMessage, playerData.userId]);
 
             // Actualizar objeto seleccionado cuando cambie desde Realtime
             useEffect(() => {
@@ -838,32 +917,6 @@
                     }
                 }
             }, [interactiveObjects]);
-
-            // Handler para recibir mensajes
-            const handleMessageReceived = useCallback(({ userId, messageType, content }) => {
-                const presetMsg = PRESET_MESSAGES.find(m => m.id === messageType || m.text === content);
-                const messageColor = presetMsg ? presetMsg.color : '#FFFFFF';
-                
-                // Crear mensaje animado
-                const messageId = `${userId}_${Date.now()}`;
-                const newMessage = {
-                    id: messageId,
-                    userId: userId,
-                    content: content,
-                    color: messageColor,
-                    startTime: Date.now()
-                };
-                
-                setActiveMessages(prev => [...prev, newMessage]);
-                
-                // Eliminar mensaje después de 4 segundos
-                setTimeout(() => {
-                    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
-                }, 4000);
-            }, []);
-
-            // Hook de multiplayer
-            const { otherPlayers, onlineUsers, broadcastPosition, broadcastMessage } = useMultiplayer(playerData, handleMessageReceived);
 
             // Manejo de teclado
             useEffect(() => {
@@ -937,6 +990,7 @@
                         let newX = prev.x;
                         let newY = prev.y;
                         const keys = keysRef.current;
+                        const canvas = canvasRef.current;
 
                         // Movimiento: WASD o flechas
                         if (keys['w'] || keys['ArrowUp']) {
@@ -952,12 +1006,39 @@
                             newX += prev.speed;
                         }
 
-                        // Limitar movimiento dentro del canvas
-                        const canvas = canvasRef.current;
+                        // Verificar límites del mundo (World Bounds)
                         if (canvas) {
-                            newX = Math.max(prev.radius, Math.min(canvas.width - prev.radius, newX));
-                            newY = Math.max(prev.radius, Math.min(canvas.height - prev.radius, newY));
+                            const minX = prev.radius;
+                            const maxX = canvas.width - prev.radius;
+                            const minY = prev.radius;
+                            const maxY = canvas.height - prev.radius;
+                            
+                            // Clamping: si se sale, bloquear el movimiento
+                            newX = Math.max(minX, Math.min(maxX, newX));
+                            newY = Math.max(minY, Math.min(maxY, newY));
                         }
+
+                        // Verificar colisiones con objetos interactivos (pizarra)
+                        if (interactiveObjects && interactiveObjects.length > 0) {
+                            interactiveObjects.forEach(obj => {
+                                if (checkCollision(newX, newY, prev.radius, 
+                                    obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT)) {
+                                    // Colisión detectada: revertir movimiento
+                                    newX = prev.x;
+                                    newY = prev.y;
+                                }
+                            });
+                        }
+
+                        // Verificar colisiones con mobiliario
+                        furniture.forEach(item => {
+                            if (checkCollision(newX, newY, prev.radius, 
+                                item.x, item.y, item.width, item.height)) {
+                                // Colisión detectada: revertir movimiento
+                                newX = prev.x;
+                                newY = prev.y;
+                            }
+                        });
 
                         // Broadcast posición con throttle (manejado en el hook)
                         broadcastPosition(newX, newY);
@@ -969,7 +1050,7 @@
                 const interval = setInterval(updatePlayerPosition, 16); // ~60 FPS
 
                 return () => clearInterval(interval);
-            }, []);
+            }, [interactiveObjects, furniture, broadcastPosition]);
 
             // Game loop - renderizado
             useEffect(() => {
@@ -988,11 +1069,41 @@
                 window.addEventListener('resize', resizeCanvas);
 
                 const gameLoop = () => {
-                    // Limpiar canvas
-                    ctx.fillStyle = '#16213e';
+                    // Limpiar canvas con fondo oscuro
+                    ctx.fillStyle = '#1a1a2e'; // Fondo más oscuro
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    // Dibujar objetos interactivos desde la base de datos
+                    // Dibujar grid del suelo
+                    drawGrid(ctx, canvas.width, canvas.height);
+
+                    // Dibujar mobiliario (obstáculos sólidos)
+                    furniture.forEach(item => {
+                        // Color según tipo de mueble
+                        if (item.type === 'desk') {
+                            ctx.fillStyle = '#5d4037'; // Marrón oscuro para escritorio
+                        } else {
+                            ctx.fillStyle = '#6d4c41'; // Marrón medio para mesas
+                        }
+                        
+                        ctx.fillRect(item.x, item.y, item.width, item.height);
+                        
+                        // Borde
+                        ctx.strokeStyle = '#4e342e';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(item.x, item.y, item.width, item.height);
+                        
+                        // Etiqueta (opcional, pequeña)
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.font = '10px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(
+                            item.label,
+                            item.x + item.width / 2,
+                            item.y + item.height / 2
+                        );
+                    });
+
+                    // Dibujar objetos interactivos desde la base de datos (pizarra)
                     if (interactiveObjects && interactiveObjects.length > 0) {
                         interactiveObjects.forEach(obj => {
                             // Dibujar rectángulo del objeto
@@ -1151,7 +1262,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture]);
 
             return (
                 <div className="game-container">
