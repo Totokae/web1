@@ -1413,6 +1413,23 @@
             const [loading, setLoading] = useState(true);
             const [isAdmin, setIsAdmin] = useState(false);
             const channelRef = useRef(null);
+            const [isMobile, setIsMobile] = useState(false);
+
+            // Verificar si es móvil
+            useEffect(() => {
+                const checkMobile = () => {
+                    if (typeof window !== 'undefined') {
+                        setIsMobile(window.innerWidth < 768);
+                    }
+                };
+
+                checkMobile();
+                window.addEventListener('resize', checkMobile);
+
+                return () => {
+                    window.removeEventListener('resize', checkMobile);
+                };
+            }, []);
 
             // Verificar sesión de admin al cargar
             useEffect(() => {
