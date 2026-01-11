@@ -297,6 +297,28 @@
                 transform: translate(-50%, -50%) scale(1.05);
             }
         }
+
+        /* Restricción móvil */
+        .mobile-restriction {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .mobile-restriction.active {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -311,6 +333,10 @@
 
         // Inicializar Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Dimensiones del Mundo (fijas)
+        const WORLD_WIDTH = 2000;
+        const WORLD_HEIGHT = 1500;
 
         // Colores disponibles
         const AVAILABLE_COLORS = [
@@ -788,6 +814,9 @@
             const OBJECT_WIDTH = 200;
             const OBJECT_HEIGHT = 150;
 
+            // Estado de la cámara
+            const [camera, setCamera] = useState({ x: 0, y: 0 });
+
             // Mobiliario hardcoded (obstáculos sólidos)
             // Escritorio del profesor: cerca de la pizarra
             // Mesas de alumnos: distribuidas en el aula
@@ -805,24 +834,24 @@
             ], []);
 
             // Función para dibujar el grid del suelo
-            const drawGrid = (ctx, canvasWidth, canvasHeight) => {
+            const drawGrid = (ctx) => {
                 const gridSize = 40; // Tamaño de cada celda del grid
                 ctx.strokeStyle = 'rgba(200, 200, 220, 0.15)'; // Gris muy claro, casi transparente
                 ctx.lineWidth = 1;
 
                 // Líneas verticales
-                for (let x = 0; x <= canvasWidth; x += gridSize) {
+                for (let x = 0; x <= WORLD_WIDTH; x += gridSize) {
                     ctx.beginPath();
                     ctx.moveTo(x, 0);
-                    ctx.lineTo(x, canvasHeight);
+                    ctx.lineTo(x, WORLD_HEIGHT);
                     ctx.stroke();
                 }
 
                 // Líneas horizontales
-                for (let y = 0; y <= canvasHeight; y += gridSize) {
+                for (let y = 0; y <= WORLD_HEIGHT; y += gridSize) {
                     ctx.beginPath();
                     ctx.moveTo(0, y);
-                    ctx.lineTo(canvasWidth, y);
+                    ctx.lineTo(WORLD_WIDTH, y);
                     ctx.stroke();
                 }
             };
@@ -983,6 +1012,41 @@
                 checkNearbyObjects();
             }, [player, interactiveObjects]);
 
+            // Actualizar cámara para seguir al jugador
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const updateCamera = () => {
+                    // La cámara debe mantener al jugador en el centro de la pantalla
+                    let targetCameraX = player.x - canvas.width / 2;
+                    let targetCameraY = player.y - canvas.height / 2;
+
+                    // Clamping: la cámara no debe salirse de los límites del mundo
+                    const minCameraX = 0;
+                    const maxCameraX = WORLD_WIDTH - canvas.width;
+                    const minCameraY = 0;
+                    const maxCameraY = WORLD_HEIGHT - canvas.height;
+
+                    // Aplicar clamping solo si el mundo es más grande que el canvas
+                    if (WORLD_WIDTH > canvas.width) {
+                        targetCameraX = Math.max(minCameraX, Math.min(maxCameraX, targetCameraX));
+                    } else {
+                        targetCameraX = (WORLD_WIDTH - canvas.width) / 2;
+                    }
+
+                    if (WORLD_HEIGHT > canvas.height) {
+                        targetCameraY = Math.max(minCameraY, Math.min(maxCameraY, targetCameraY));
+                    } else {
+                        targetCameraY = (WORLD_HEIGHT - canvas.height) / 2;
+                    }
+
+                    setCamera({ x: targetCameraX, y: targetCameraY });
+                };
+
+                updateCamera();
+            }, [player]);
+
             // Actualizar posición del jugador y broadcast
             useEffect(() => {
                 const updatePlayerPosition = () => {
@@ -1007,16 +1071,14 @@
                         }
 
                         // Verificar límites del mundo (World Bounds)
-                        if (canvas) {
-                            const minX = prev.radius;
-                            const maxX = canvas.width - prev.radius;
-                            const minY = prev.radius;
-                            const maxY = canvas.height - prev.radius;
-                            
-                            // Clamping: si se sale, bloquear el movimiento
-                            newX = Math.max(minX, Math.min(maxX, newX));
-                            newY = Math.max(minY, Math.min(maxY, newY));
-                        }
+                        const minX = prev.radius;
+                        const maxX = WORLD_WIDTH - prev.radius;
+                        const minY = prev.radius;
+                        const maxY = WORLD_HEIGHT - prev.radius;
+                        
+                        // Clamping: si se sale, bloquear el movimiento
+                        newX = Math.max(minX, Math.min(maxX, newX));
+                        newY = Math.max(minY, Math.min(maxY, newY));
 
                         // Verificar colisiones con objetos interactivos (pizarra)
                         if (interactiveObjects && interactiveObjects.length > 0) {
@@ -1073,8 +1135,23 @@
                     ctx.fillStyle = '#1a1a2e'; // Fondo más oscuro
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                    // Guardar estado del contexto
+                    ctx.save();
+
+                    // Aplicar transformación de cámara (trasladar)
+                    ctx.translate(-camera.x, -camera.y);
+
+                    // Dibujar fondo del mundo (área delimitada)
+                    ctx.fillStyle = '#16213e'; // Color de fondo del mundo
+                    ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+                    // Dibujar borde rojo grueso del mundo
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 8;
+                    ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
                     // Dibujar grid del suelo
-                    drawGrid(ctx, canvas.width, canvas.height);
+                    drawGrid(ctx);
 
                     // Dibujar mobiliario (obstáculos sólidos)
                     furniture.forEach(item => {
@@ -1214,19 +1291,19 @@
                         const textPadding = 10;
                         const bgPadding = 6;
 
-                        // Ajustar horizontalmente si está cerca del borde
+                        // Ajustar horizontalmente si está cerca del borde del mundo
                         if (finalX - textWidth / 2 - bgPadding < textPadding) {
                             finalX = textWidth / 2 + bgPadding + textPadding;
-                        } else if (finalX + textWidth / 2 + bgPadding > canvas.width - textPadding) {
-                            finalX = canvas.width - textWidth / 2 - bgPadding - textPadding;
+                        } else if (finalX + textWidth / 2 + bgPadding > WORLD_WIDTH - textPadding) {
+                            finalX = WORLD_WIDTH - textWidth / 2 - bgPadding - textPadding;
                         }
 
-                        // Ajustar verticalmente si está cerca del borde superior
+                        // Ajustar verticalmente si está cerca del borde del mundo
                         if (finalY - textHeight / 2 - bgPadding < textPadding) {
                             // Dibujar debajo del jugador si está muy arriba
                             finalY = playerY + playerRadius + 20 + Math.abs(offsetY);
-                        } else if (finalY + textHeight / 2 + bgPadding > canvas.height - textPadding) {
-                            finalY = canvas.height - textHeight / 2 - bgPadding - textPadding;
+                        } else if (finalY + textHeight / 2 + bgPadding > WORLD_HEIGHT - textPadding) {
+                            finalY = WORLD_HEIGHT - textHeight / 2 - bgPadding - textPadding;
                         }
 
                         // Dibujar fondo semitransparente para legibilidad
@@ -1250,6 +1327,9 @@
                         ctx.globalAlpha = 1;
                     });
 
+                    // Restaurar estado del contexto (después de dibujar todo el mundo)
+                    ctx.restore();
+
                     // Siguiente frame
                     animationFrameRef.current = requestAnimationFrame(gameLoop);
                 };
@@ -1262,7 +1342,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera]);
 
             return (
                 <div className="game-container">
@@ -1471,6 +1551,14 @@
             const handleLogout = () => {
                 setIsAdmin(false);
             };
+
+            if (isMobile) {
+                return (
+                    <div className="mobile-restriction active">
+                        Esta experiencia está diseñada para ordenadores. Por favor, usa una PC o Notebook.
+                    </div>
+                );
+            }
 
             if (!playerData) {
                 return (
