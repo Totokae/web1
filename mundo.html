@@ -789,7 +789,6 @@
         const GameCanvas = ({ playerData, interactiveObjects, isAdmin, onSaveObject }) => {
             const canvasRef = useRef(null);
             const animationFrameRef = useRef(null);
-            const keysRef = useRef({});
             
             // Estado del jugador local
             const [player, setPlayer] = useState({
@@ -816,6 +815,10 @@
 
             // Estado de la cámara
             const [camera, setCamera] = useState({ x: 0, y: 0 });
+
+            // Estado para click-to-move
+            const [targetPosition, setTargetPosition] = useState(null);
+            const [clickFeedback, setClickFeedback] = useState(null);
 
             // Mobiliario hardcoded (obstáculos sólidos)
             // Escritorio del profesor: cerca de la pizarra
@@ -947,12 +950,9 @@
                 }
             }, [interactiveObjects]);
 
-            // Manejo de teclado
+            // Manejo de teclado (solo para interacción con tecla 'E')
             useEffect(() => {
                 const handleKeyDown = (e) => {
-                    keysRef.current[e.key.toLowerCase()] = true;
-                    keysRef.current[e.code] = true;
-
                     // Detectar tecla 'E' para interactuar
                     if ((e.key === 'e' || e.key === 'E') && nearbyObject) {
                         // Buscar el objeto actualizado en la lista
@@ -967,19 +967,12 @@
                     }
                 };
 
-                const handleKeyUp = (e) => {
-                    keysRef.current[e.key.toLowerCase()] = false;
-                    keysRef.current[e.code] = false;
-                };
-
                 window.addEventListener('keydown', handleKeyDown);
-                window.addEventListener('keyup', handleKeyUp);
 
                 return () => {
                     window.removeEventListener('keydown', handleKeyDown);
-                    window.removeEventListener('keyup', handleKeyUp);
                 };
-            }, [nearbyObject]);
+            }, [nearbyObject, interactiveObjects]);
 
             // Calcular objeto cercano basado en distancia
             useEffect(() => {
@@ -1011,6 +1004,40 @@
 
                 checkNearbyObjects();
             }, [player, interactiveObjects]);
+
+            // Handler de click en el canvas (click-to-move)
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const handleCanvasClick = (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+
+                    // Convertir coordenadas de pantalla a coordenadas del mundo
+                    // CRÍTICO: WorldX = MouseX + CameraX
+                    const worldX = mouseX + camera.x;
+                    const worldY = mouseY + camera.y;
+
+                    // Validar que el click esté dentro del mundo
+                    if (worldX >= 0 && worldX <= WORLD_WIDTH && worldY >= 0 && worldY <= WORLD_HEIGHT) {
+                        setTargetPosition({ x: worldX, y: worldY });
+
+                        // Feedback visual: mostrar marca por 0.5s
+                        setClickFeedback({ x: worldX, y: worldY, startTime: Date.now() });
+                        setTimeout(() => {
+                            setClickFeedback(null);
+                        }, 500);
+                    }
+                };
+
+                canvas.addEventListener('click', handleCanvasClick);
+
+                return () => {
+                    canvas.removeEventListener('click', handleCanvasClick);
+                };
+            }, [camera]);
 
             // Actualizar cámara para seguir al jugador
             useEffect(() => {
@@ -1047,27 +1074,36 @@
                 updateCamera();
             }, [player]);
 
-            // Actualizar posición del jugador y broadcast
+            // Actualizar posición del jugador (click-to-move) y broadcast
             useEffect(() => {
                 const updatePlayerPosition = () => {
                     setPlayer(prev => {
+                        // Si no hay targetPosition, no mover
+                        if (!targetPosition) {
+                            return prev;
+                        }
+
                         let newX = prev.x;
                         let newY = prev.y;
-                        const keys = keysRef.current;
-                        const canvas = canvasRef.current;
 
-                        // Movimiento: WASD o flechas
-                        if (keys['w'] || keys['ArrowUp']) {
-                            newY -= prev.speed;
-                        }
-                        if (keys['s'] || keys['ArrowDown']) {
-                            newY += prev.speed;
-                        }
-                        if (keys['a'] || keys['ArrowLeft']) {
-                            newX -= prev.speed;
-                        }
-                        if (keys['d'] || keys['ArrowRight']) {
-                            newX += prev.speed;
+                        // Calcular vector hacia el target
+                        const dx = targetPosition.x - prev.x;
+                        const dy = targetPosition.y - prev.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Si estamos muy cerca (menos de 5px), detener y encajar en la posición final
+                        if (distance < 5) {
+                            const finalX = targetPosition.x;
+                            const finalY = targetPosition.y;
+                            setTargetPosition(null);
+                            newX = finalX;
+                            newY = finalY;
+                        } else {
+                            // Normalizar el vector y mover
+                            const moveX = (dx / distance) * prev.speed;
+                            const moveY = (dy / distance) * prev.speed;
+                            newX = prev.x + moveX;
+                            newY = prev.y + moveY;
                         }
 
                         // Verificar límites del mundo (World Bounds)
@@ -1081,13 +1117,13 @@
                         newY = Math.max(minY, Math.min(maxY, newY));
 
                         // Verificar colisiones con objetos interactivos (pizarra)
+                        let collision = false;
                         if (interactiveObjects && interactiveObjects.length > 0) {
                             interactiveObjects.forEach(obj => {
                                 if (checkCollision(newX, newY, prev.radius, 
                                     obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT)) {
-                                    // Colisión detectada: revertir movimiento
-                                    newX = prev.x;
-                                    newY = prev.y;
+                                    // Colisión detectada: DETENER MOVIMIENTO
+                                    collision = true;
                                 }
                             });
                         }
@@ -1096,11 +1132,17 @@
                         furniture.forEach(item => {
                             if (checkCollision(newX, newY, prev.radius, 
                                 item.x, item.y, item.width, item.height)) {
-                                // Colisión detectada: revertir movimiento
-                                newX = prev.x;
-                                newY = prev.y;
+                                // Colisión detectada: DETENER MOVIMIENTO
+                                collision = true;
                             }
                         });
+
+                        // Si hay colisión, detener el movimiento
+                        if (collision) {
+                            setTargetPosition(null);
+                            newX = prev.x;
+                            newY = prev.y;
+                        }
 
                         // Broadcast posición con throttle (manejado en el hook)
                         broadcastPosition(newX, newY);
@@ -1112,7 +1154,7 @@
                 const interval = setInterval(updatePlayerPosition, 16); // ~60 FPS
 
                 return () => clearInterval(interval);
-            }, [interactiveObjects, furniture, broadcastPosition]);
+            }, [targetPosition, interactiveObjects, furniture, broadcastPosition]);
 
             // Game loop - renderizado
             useEffect(() => {
@@ -1327,6 +1369,38 @@
                         ctx.globalAlpha = 1;
                     });
 
+                    // Dibujar feedback visual del click (marca en el suelo)
+                    if (clickFeedback) {
+                        const elapsed = Date.now() - clickFeedback.startTime;
+                        const duration = 500; // 0.5 segundos
+                        const progress = Math.min(elapsed / duration, 1);
+                        const opacity = 1 - progress;
+
+                        if (opacity > 0) {
+                            ctx.save();
+                            ctx.globalAlpha = opacity;
+                            
+                            // Dibujar un círculo o 'X' en el destino
+                            const size = 15;
+                            ctx.strokeStyle = '#4CAF50';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            // Dibujar una 'X'
+                            ctx.moveTo(clickFeedback.x - size, clickFeedback.y - size);
+                            ctx.lineTo(clickFeedback.x + size, clickFeedback.y + size);
+                            ctx.moveTo(clickFeedback.x + size, clickFeedback.y - size);
+                            ctx.lineTo(clickFeedback.x - size, clickFeedback.y + size);
+                            ctx.stroke();
+                            
+                            // Dibujar un círculo alrededor
+                            ctx.beginPath();
+                            ctx.arc(clickFeedback.x, clickFeedback.y, size * 1.2, 0, Math.PI * 2);
+                            ctx.stroke();
+                            
+                            ctx.restore();
+                        }
+                    }
+
                     // Restaurar estado del contexto (después de dibujar todo el mundo)
                     ctx.restore();
 
@@ -1342,7 +1416,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera, clickFeedback]);
 
             return (
                 <div className="game-container">
