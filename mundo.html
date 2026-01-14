@@ -820,6 +820,11 @@
             const [targetPosition, setTargetPosition] = useState(null);
             const [clickFeedback, setClickFeedback] = useState(null);
 
+            // Estados para imágenes
+            const [semillaImg, setSemillaImg] = useState(null);
+            const [backgroundImg, setBackgroundImg] = useState(null);
+            const [imagesLoaded, setImagesLoaded] = useState(false);
+
             // Mobiliario hardcoded (obstáculos sólidos)
             // Escritorio del profesor: cerca de la pizarra
             // Mesas de alumnos: distribuidas en el aula
@@ -973,6 +978,81 @@
                     window.removeEventListener('keydown', handleKeyDown);
                 };
             }, [nearbyObject, interactiveObjects]);
+
+            // Cargar imágenes
+            useEffect(() => {
+                const loadImages = async () => {
+                    const semillaImage = new Image();
+                    const backgroundImage = new Image();
+                    
+                    let semillaLoaded = false;
+                    let backgroundLoaded = false;
+
+                    const checkAllLoaded = () => {
+                        if (semillaLoaded && backgroundLoaded) {
+                            setImagesLoaded(true);
+                        }
+                    };
+
+                    semillaImage.onload = () => {
+                        setSemillaImg(semillaImage);
+                        semillaLoaded = true;
+                        checkAllLoaded();
+                    };
+                    semillaImage.onerror = () => {
+                        console.error('Error cargando semilla.png');
+                        semillaLoaded = true;
+                        checkAllLoaded();
+                    };
+                    semillaImage.src = './semilla.png';
+
+                    backgroundImage.onload = () => {
+                        setBackgroundImg(backgroundImage);
+                        backgroundLoaded = true;
+                        checkAllLoaded();
+                    };
+                    backgroundImage.onerror = () => {
+                        console.error('Error cargando background.png');
+                        backgroundLoaded = true;
+                        checkAllLoaded();
+                    };
+                    backgroundImage.src = './background.png';
+                };
+
+                loadImages();
+            }, []);
+
+            // Función helper para dibujar jugador con imagen tintada
+            const drawTintedPlayer = useCallback((ctx, x, y, color, radius, img) => {
+                if (!img || !img.complete) {
+                    // Fallback a círculo si la imagen no está cargada
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    return;
+                }
+
+                const imgSize = radius * 2;
+                
+                ctx.save();
+                
+                // Dibujar la imagen primero
+                ctx.drawImage(img, x - radius, y - radius, imgSize, imgSize);
+                
+                // Aplicar tintado con multiply (funciona bien con imágenes en escala de grises)
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = color;
+                ctx.fillRect(x - radius, y - radius, imgSize, imgSize);
+                
+                // Restaurar composición normal
+                ctx.globalCompositeOperation = 'source-over';
+                
+                ctx.restore();
+            }, []);
 
             // Calcular objeto cercano basado en distancia
             useEffect(() => {
@@ -1183,17 +1263,27 @@
                     // Aplicar transformación de cámara (trasladar)
                     ctx.translate(-camera.x, -camera.y);
 
-                    // Dibujar fondo del mundo (área delimitada)
-                    ctx.fillStyle = '#16213e'; // Color de fondo del mundo
-                    ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+                    // Dibujar fondo del mundo con patrón tiling
+                    if (backgroundImg) {
+                        const pattern = ctx.createPattern(backgroundImg, 'repeat');
+                        if (pattern) {
+                            ctx.fillStyle = pattern;
+                            ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+                        } else {
+                            // Fallback si createPattern falla
+                            ctx.fillStyle = '#16213e';
+                            ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
+                    } else {
+                        // Fallback si la imagen no está cargada
+                        ctx.fillStyle = '#16213e';
+                        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+                    }
 
                     // Dibujar borde rojo grueso del mundo
                     ctx.strokeStyle = '#ff0000';
                     ctx.lineWidth = 8;
                     ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-                    // Dibujar grid del suelo
-                    drawGrid(ctx);
 
                     // Dibujar mobiliario (obstáculos sólidos)
                     furniture.forEach(item => {
@@ -1248,13 +1338,7 @@
 
                     // Dibujar otros jugadores
                     Object.values(otherPlayers).forEach(otherPlayer => {
-                        ctx.beginPath();
-                        ctx.arc(otherPlayer.x, otherPlayer.y, player.radius, 0, Math.PI * 2);
-                        ctx.fillStyle = otherPlayer.color;
-                        ctx.fill();
-                        ctx.strokeStyle = '#fff';
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
+                        drawTintedPlayer(ctx, otherPlayer.x, otherPlayer.y, otherPlayer.color, player.radius, semillaImg);
 
                         // Dibujar nickname sobre el jugador
                         if (otherPlayer.nickname) {
@@ -1269,14 +1353,8 @@
                         }
                     });
 
-                    // Dibujar jugador local (círculo)
-                    ctx.beginPath();
-                    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = player.color;
-                    ctx.fill();
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
+                    // Dibujar jugador local
+                    drawTintedPlayer(ctx, player.x, player.y, player.color, player.radius, semillaImg);
 
                     // Dibujar nickname del jugador local
                     ctx.fillStyle = 'white';
@@ -1416,7 +1494,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera, clickFeedback]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera, clickFeedback, semillaImg, backgroundImg, drawTintedPlayer]);
 
             return (
                 <div className="game-container">
