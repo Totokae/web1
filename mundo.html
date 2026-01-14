@@ -1022,7 +1022,7 @@
                 loadImages();
             }, []);
 
-            // Función helper para dibujar jugador con imagen tintada (usando canvas offscreen para respetar transparencia)
+            // Función helper para dibujar jugador con imagen tintada (usando canvas offscreen con multiply para preservar detalles)
             const drawTintedPlayer = useCallback((ctx, x, y, color, radius, img) => {
                 if (!img || !img.complete) {
                     // Fallback a círculo si la imagen no está cargada
@@ -1038,22 +1038,28 @@
 
                 const imgSize = radius * 2;
                 
-                // Crear canvas offscreen para aplicar tintado respetando transparencia
+                // Crear canvas offscreen para aplicar tintado preservando detalles
                 const offscreenCanvas = document.createElement('canvas');
                 offscreenCanvas.width = imgSize;
                 offscreenCanvas.height = imgSize;
                 const offscreenCtx = offscreenCanvas.getContext('2d');
                 
-                // Paso 1: Dibujar la imagen en el canvas offscreen
+                // Paso A: Limpiar el canvas offscreen
+                offscreenCtx.clearRect(0, 0, imgSize, imgSize);
+                
+                // Paso B: Dibujar la imagen original normalmente (source-over por defecto)
                 offscreenCtx.drawImage(img, 0, 0, imgSize, imgSize);
                 
-                // Paso 2: Usar source-in para crear una máscara basada en la imagen (solo píxeles opacos)
-                offscreenCtx.globalCompositeOperation = 'source-in';
+                // Paso C: Cambiar a 'multiply' para multiplicar el color con los píxeles existentes
+                offscreenCtx.globalCompositeOperation = 'multiply';
+                
+                // Paso D: Dibujar el rectángulo del color sobre todo el canvas offscreen
                 offscreenCtx.fillStyle = color;
                 offscreenCtx.fillRect(0, 0, imgSize, imgSize);
                 
-                // Paso 3: Dibujar el resultado en el canvas principal
+                // Paso 4: Dibujar el resultado en el canvas principal
                 ctx.save();
+                ctx.globalCompositeOperation = 'source-over';
                 ctx.drawImage(offscreenCanvas, x - radius, y - radius);
                 ctx.restore();
             }, []);
