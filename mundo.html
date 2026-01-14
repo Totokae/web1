@@ -1022,7 +1022,7 @@
                 loadImages();
             }, []);
 
-            // Función helper para dibujar jugador con imagen tintada
+            // Función helper para dibujar jugador con imagen tintada (usando canvas offscreen para respetar transparencia)
             const drawTintedPlayer = useCallback((ctx, x, y, color, radius, img) => {
                 if (!img || !img.complete) {
                     // Fallback a círculo si la imagen no está cargada
@@ -1038,19 +1038,23 @@
 
                 const imgSize = radius * 2;
                 
+                // Crear canvas offscreen para aplicar tintado respetando transparencia
+                const offscreenCanvas = document.createElement('canvas');
+                offscreenCanvas.width = imgSize;
+                offscreenCanvas.height = imgSize;
+                const offscreenCtx = offscreenCanvas.getContext('2d');
+                
+                // Paso 1: Dibujar la imagen en el canvas offscreen
+                offscreenCtx.drawImage(img, 0, 0, imgSize, imgSize);
+                
+                // Paso 2: Usar source-in para crear una máscara basada en la imagen (solo píxeles opacos)
+                offscreenCtx.globalCompositeOperation = 'source-in';
+                offscreenCtx.fillStyle = color;
+                offscreenCtx.fillRect(0, 0, imgSize, imgSize);
+                
+                // Paso 3: Dibujar el resultado en el canvas principal
                 ctx.save();
-                
-                // Dibujar la imagen primero
-                ctx.drawImage(img, x - radius, y - radius, imgSize, imgSize);
-                
-                // Aplicar tintado con multiply (funciona bien con imágenes en escala de grises)
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = color;
-                ctx.fillRect(x - radius, y - radius, imgSize, imgSize);
-                
-                // Restaurar composición normal
-                ctx.globalCompositeOperation = 'source-over';
-                
+                ctx.drawImage(offscreenCanvas, x - radius, y - radius);
                 ctx.restore();
             }, []);
 
