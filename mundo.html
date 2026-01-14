@@ -789,6 +789,7 @@
         const GameCanvas = ({ playerData, interactiveObjects, isAdmin, onSaveObject }) => {
             const canvasRef = useRef(null);
             const animationFrameRef = useRef(null);
+            const spriteCacheRef = useRef(new Map()); // Caché de sprites tintados por color
             
             // Estado del jugador local
             const [player, setPlayer] = useState({
@@ -1022,23 +1023,20 @@
                 loadImages();
             }, []);
 
-            // Función helper para dibujar jugador con imagen tintada (usando canvas offscreen con multiply para preservar detalles)
-            const drawTintedPlayer = useCallback((ctx, x, y, color, radius, img) => {
+            // Función para generar sprite tintado cacheado
+            const getTintedSprite = useCallback((color, radius, img) => {
                 if (!img || !img.complete) {
-                    // Fallback a círculo si la imagen no está cargada
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    return;
+                    return null;
                 }
 
+                // Verificar si ya existe en el caché
+                const cacheKey = `${color}_${radius}`;
+                if (spriteCacheRef.current.has(cacheKey)) {
+                    return spriteCacheRef.current.get(cacheKey);
+                }
+
+                // Generar sprite tintado (solo si no está en caché)
                 const imgSize = radius * 2;
-                
-                // Crear canvas offscreen para aplicar tintado preservando detalles
                 const offscreenCanvas = document.createElement('canvas');
                 offscreenCanvas.width = imgSize;
                 offscreenCanvas.height = imgSize;
@@ -1057,12 +1055,31 @@
                 offscreenCtx.fillStyle = color;
                 offscreenCtx.fillRect(0, 0, imgSize, imgSize);
                 
-                // Paso 4: Dibujar el resultado en el canvas principal
-                ctx.save();
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.drawImage(offscreenCanvas, x - radius, y - radius);
-                ctx.restore();
+                // Guardar en caché
+                spriteCacheRef.current.set(cacheKey, offscreenCanvas);
+                
+                return offscreenCanvas;
             }, []);
+
+            // Función helper para dibujar jugador con imagen tintada (usando caché)
+            const drawTintedPlayer = useCallback((ctx, x, y, color, radius, img) => {
+                // Intentar obtener sprite cacheado
+                const cachedSprite = getTintedSprite(color, radius, img);
+                
+                if (cachedSprite) {
+                    // Usar sprite cacheado (muy rápido)
+                    ctx.drawImage(cachedSprite, x - radius, y - radius);
+                } else {
+                    // Fallback a círculo si la imagen no está cargada
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }, [getTintedSprite]);
 
             // Calcular objeto cercano basado en distancia
             useEffect(() => {
