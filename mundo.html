@@ -847,8 +847,8 @@
             
             // Estado del jugador local
             const [player, setPlayer] = useState({
-                x: 400,
-                y: 300,
+                x: 440,
+                y: 920,
                 color: playerData.color,
                 nickname: playerData.nickname,
                 radius: 15,
@@ -868,8 +868,20 @@
             const OBJECT_WIDTH = 200;
             const OBJECT_HEIGHT = 150;
 
-            // Estado de la cámara
-            const [camera, setCamera] = useState({ x: 0, y: 0 });
+            // Estado de la cámara (inicializada centrada en el spawn point para evitar salto)
+            const [camera, setCamera] = useState(() => {
+                // Calcular posición inicial de cámara basada en spawn point (440, 920)
+                // Usar valores por defecto del canvas hasta que se ajuste en el useEffect
+                const defaultCanvasWidth = window.innerWidth || 1920;
+                const defaultCanvasHeight = window.innerHeight || 1080;
+                const initialCameraX = 440 - defaultCanvasWidth / 2;
+                const initialCameraY = 920 - defaultCanvasHeight / 2;
+                // Aplicar clamping básico
+                return {
+                    x: Math.max(0, Math.min(WORLD_WIDTH - defaultCanvasWidth, initialCameraX)),
+                    y: Math.max(0, Math.min(WORLD_HEIGHT - defaultCanvasHeight, initialCameraY))
+                };
+            });
 
             // Estado para click-to-move
             const [targetPosition, setTargetPosition] = useState(null);
