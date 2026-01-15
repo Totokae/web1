@@ -1277,19 +1277,8 @@
                         newX = Math.max(minX, Math.min(maxX, newX));
                         newY = Math.max(minY, Math.min(maxY, newY));
 
-                        // Verificar colisiones con objetos interactivos (pizarra)
-                        let collision = false;
-                        if (interactiveObjects && interactiveObjects.length > 0) {
-                            interactiveObjects.forEach(obj => {
-                                if (checkCollision(newX, newY, prev.radius, 
-                                    obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT)) {
-                                    // Colisión detectada: DETENER MOVIMIENTO
-                                    collision = true;
-                                }
-                            });
-                        }
-
                         // Verificar colisiones con OBSTACLES
+                        let collision = false;
                         OBSTACLES.forEach(obstacle => {
                             if (checkCollision(newX, newY, prev.radius, 
                                 obstacle.x, obstacle.y, obstacle.width, obstacle.height)) {
@@ -1374,29 +1363,6 @@
                         });
                     }
 
-                    // Dibujar objetos interactivos desde la base de datos (pizarra)
-                    if (interactiveObjects && interactiveObjects.length > 0) {
-                        interactiveObjects.forEach(obj => {
-                            // Dibujar rectángulo del objeto
-                            ctx.fillStyle = '#8B4513'; // Color marrón
-                            ctx.fillRect(obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT);
-                            
-                            // Borde del objeto (verde si está cerca)
-                            ctx.strokeStyle = nearbyObject && nearbyObject.id === obj.id ? '#4CAF50' : '#654321';
-                            ctx.lineWidth = nearbyObject && nearbyObject.id === obj.id ? 3 : 2;
-                            ctx.strokeRect(obj.position_x, obj.position_y, OBJECT_WIDTH, OBJECT_HEIGHT);
-
-                            // Etiqueta del tipo de objeto
-                            ctx.fillStyle = 'white';
-                            ctx.font = '12px Courier New';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(
-                                obj.type || 'Objeto',
-                                obj.position_x + OBJECT_WIDTH / 2,
-                                obj.position_y + OBJECT_HEIGHT / 2
-                            );
-                        });
-                    }
 
                     // Dibujar otros jugadores
                     Object.values(otherPlayers).forEach(otherPlayer => {
