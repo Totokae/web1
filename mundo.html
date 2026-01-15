@@ -892,21 +892,6 @@
             const [backgroundImg, setBackgroundImg] = useState(null);
             const [imagesLoaded, setImagesLoaded] = useState(false);
 
-            // Mobiliario hardcoded (obstáculos sólidos)
-            // Escritorio del profesor: cerca de la pizarra
-            // Mesas de alumnos: distribuidas en el aula
-            // Usar useMemo para evitar recrear el array en cada render
-            const furniture = React.useMemo(() => [
-                // Escritorio del profesor (cerca de la pizarra)
-                { x: 100, y: 100, width: 120, height: 80, type: 'desk', label: 'Escritorio Profesor' },
-                // Mesas de alumnos (distribuidas)
-                { x: 300, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
-                { x: 450, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
-                { x: 600, y: 200, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
-                { x: 300, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
-                { x: 450, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' },
-                { x: 600, y: 350, width: 100, height: 60, type: 'table', label: 'Mesa Alumno' }
-            ], []);
 
             // Función para dibujar el grid del suelo
             const drawGrid = (ctx) => {
@@ -1304,15 +1289,6 @@
                             });
                         }
 
-                        // Verificar colisiones con mobiliario
-                        furniture.forEach(item => {
-                            if (checkCollision(newX, newY, prev.radius, 
-                                item.x, item.y, item.width, item.height)) {
-                                // Colisión detectada: DETENER MOVIMIENTO
-                                collision = true;
-                            }
-                        });
-
                         // Verificar colisiones con OBSTACLES
                         OBSTACLES.forEach(obstacle => {
                             if (checkCollision(newX, newY, prev.radius, 
@@ -1339,7 +1315,7 @@
                 const interval = setInterval(updatePlayerPosition, 16); // ~60 FPS
 
                 return () => clearInterval(interval);
-            }, [targetPosition, interactiveObjects, furniture, broadcastPosition]);
+            }, [targetPosition, interactiveObjects, broadcastPosition]);
 
             // Game loop - renderizado
             useEffect(() => {
@@ -1397,33 +1373,6 @@
                             ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
                         });
                     }
-
-                    // Dibujar mobiliario (obstáculos sólidos)
-                    furniture.forEach(item => {
-                        // Color según tipo de mueble
-                        if (item.type === 'desk') {
-                            ctx.fillStyle = '#5d4037'; // Marrón oscuro para escritorio
-                        } else {
-                            ctx.fillStyle = '#6d4c41'; // Marrón medio para mesas
-                        }
-                        
-                        ctx.fillRect(item.x, item.y, item.width, item.height);
-                        
-                        // Borde
-                        ctx.strokeStyle = '#4e342e';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(item.x, item.y, item.width, item.height);
-                        
-                        // Etiqueta (opcional, pequeña)
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                        ctx.font = '10px Courier New';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(
-                            item.label,
-                            item.x + item.width / 2,
-                            item.y + item.height / 2
-                        );
-                    });
 
                     // Dibujar objetos interactivos desde la base de datos (pizarra)
                     if (interactiveObjects && interactiveObjects.length > 0) {
@@ -1607,7 +1556,7 @@
                         cancelAnimationFrame(animationFrameRef.current);
                     }
                 };
-            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, furniture, camera, clickFeedback, semillaImg, backgroundImg, drawTintedPlayer]);
+            }, [player, otherPlayers, interactiveObjects, nearbyObject, activeMessages, playerData.userId, camera, clickFeedback, semillaImg, backgroundImg, drawTintedPlayer]);
 
             return (
                 <div className="game-container">
