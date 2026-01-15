@@ -338,6 +338,13 @@
         const WORLD_WIDTH = 2000;
         const WORLD_HEIGHT = 1500;
 
+        // Sistema de Obstáculos y Debug
+        const OBSTACLES = []; // Array de obstáculos tipo { x, y, width, height }
+        const DEBUG_MODE = true; // Modo debug para visualizar obstáculos
+
+        // Velocidad del Jugador
+        const PLAYER_SPEED = 8;
+
         // Colores disponibles
         const AVAILABLE_COLORS = [
             '#4CAF50', // Verde
@@ -798,7 +805,7 @@
                 color: playerData.color,
                 nickname: playerData.nickname,
                 radius: 15,
-                speed: 3
+                speed: PLAYER_SPEED
             });
 
             // Estado para mensajes activos (animaciones)
@@ -1127,6 +1134,9 @@
                     const worldX = mouseX + camera.x;
                     const worldY = mouseY + camera.y;
 
+                    // Logger de coordenadas para herramienta de medición
+                    console.log("COORDENADA: x: " + (mouseX + camera.x) + ", y: " + (mouseY + camera.y));
+
                     // Validar que el click esté dentro del mundo
                     if (worldX >= 0 && worldX <= WORLD_WIDTH && worldY >= 0 && worldY <= WORLD_HEIGHT) {
                         setTargetPosition({ x: worldX, y: worldY });
@@ -1207,8 +1217,8 @@
                             newY = finalY;
                         } else {
                             // Normalizar el vector y mover
-                            const moveX = (dx / distance) * prev.speed;
-                            const moveY = (dy / distance) * prev.speed;
+                            const moveX = (dx / distance) * PLAYER_SPEED;
+                            const moveY = (dy / distance) * PLAYER_SPEED;
                             newX = prev.x + moveX;
                             newY = prev.y + moveY;
                         }
@@ -1239,6 +1249,15 @@
                         furniture.forEach(item => {
                             if (checkCollision(newX, newY, prev.radius, 
                                 item.x, item.y, item.width, item.height)) {
+                                // Colisión detectada: DETENER MOVIMIENTO
+                                collision = true;
+                            }
+                        });
+
+                        // Verificar colisiones con OBSTACLES
+                        OBSTACLES.forEach(obstacle => {
+                            if (checkCollision(newX, newY, prev.radius, 
+                                obstacle.x, obstacle.y, obstacle.width, obstacle.height)) {
                                 // Colisión detectada: DETENER MOVIMIENTO
                                 collision = true;
                             }
@@ -1311,6 +1330,14 @@
                     ctx.strokeStyle = '#ff0000';
                     ctx.lineWidth = 8;
                     ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+                    // Visualización de Debug: Dibujar obstáculos
+                    if (DEBUG_MODE && OBSTACLES.length > 0) {
+                        OBSTACLES.forEach(obstacle => {
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; // Rojo semitransparente
+                            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                        });
+                    }
 
                     // Dibujar mobiliario (obstáculos sólidos)
                     furniture.forEach(item => {
