@@ -339,11 +339,58 @@
         const WORLD_HEIGHT = 1500;
 
         // Sistema de Obstáculos y Debug
-        const OBSTACLES = []; // Array de obstáculos tipo { x, y, width, height }
+        // Obstáculos parseados desde HTML (coords="x1,y1,x2,y2" -> normalizados a { x, y, width, height })
+        const OBSTACLES = [
+            { x: 509, y: 753, width: 430, height: 40 },
+            { x: 34, y: 751, width: 361, height: 42 },
+            { x: 1, y: 2, width: 57, height: 1489 },
+            { x: -1, y: 2, width: 1997, height: 305 },
+            { x: 1054, y: 290, width: 942, height: 49 },
+            { x: 1010, y: 449, width: 431, height: 187 },
+            { x: 24, y: 797, width: 369, height: 242 },
+            { x: 31, y: 982, width: 86, height: 135 },
+            { x: 10, y: 1435, width: 1240, height: 58 },
+            { x: 897, y: 4, width: 102, height: 789 },
+            { x: 1580, y: 145, width: 414, height: 500 },
+            { x: 1386, y: 1274, width: 74, height: 217 },
+            { x: 1448, y: 1011, width: 51, height: 58 },
+            { x: 1921, y: 921, width: 52, height: 54 },
+            { x: 1102, y: 320, width: 35, height: 53 },
+            { x: 1310, y: 299, width: 34, height: 70 },
+            { x: 1494, y: 313, width: 33, height: 58 },
+            { x: 423, y: 279, width: 145, height: 140 },
+            { x: 927, y: 952, width: 72, height: 76 },
+            { x: 215, y: 567, width: 109, height: 64 },
+            { x: 441, y: 562, width: 109, height: 63 },
+            { x: 662, y: 565, width: 111, height: 59 },
+            { x: 660, y: 428, width: 113, height: 61 },
+            { x: 437, y: 431, width: 117, height: 57 },
+            { x: 222, y: 428, width: 104, height: 63 },
+            { x: 155, y: 249, width: 182, height: 103 },
+            { x: 655, y: 240, width: 231, height: 112 },
+            { x: 1960, y: 997, width: 39, height: 84 },
+            { x: 842, y: 415, width: 44, height: 152 },
+            { x: 831, y: 643, width: 71, height: 133 },
+            { x: 64, y: 627, width: 69, height: 115 },
+            { x: 1989, y: 5, width: 8, height: 1488 },
+            { x: 506, y: 753, width: 440, height: 282 },
+            { x: 923, y: 723, width: 322, height: 251 },
+            { x: 1013, y: 703, width: 281, height: 214 },
+            { x: 1257, y: 709, width: 136, height: 109 },
+            { x: 1375, y: 709, width: 64, height: 60 },
+            { x: 1515, y: 1276, width: 472, height: 217 },
+            { x: 1632, y: 1161, width: 360, height: 129 },
+            { x: 1660, y: 1117, width: 268, height: 65 },
+            { x: 1582, y: 1205, width: 90, height: 110 },
+            { x: 1554, y: 1237, width: 71, height: 63 },
+            { x: 43, y: 282, width: 92, height: 138 },
+            { x: 24, y: 355, width: 65, height: 120 },
+            { x: 40, y: 194, width: 123, height: 163 }
+        ];
         const DEBUG_MODE = true; // Modo debug para visualizar obstáculos
 
         // Velocidad del Jugador
-        const PLAYER_SPEED = 8;
+        const PLAYER_SPEED = 5;
 
         // Colores disponibles
         const AVAILABLE_COLORS = [
@@ -1334,7 +1381,7 @@
                     // Visualización de Debug: Dibujar obstáculos
                     if (DEBUG_MODE && OBSTACLES.length > 0) {
                         OBSTACLES.forEach(obstacle => {
-                            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; // Rojo semitransparente
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.4)'; // Rojo semitransparente
                             ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
                         });
                     }
