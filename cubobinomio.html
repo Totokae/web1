@@ -202,10 +202,11 @@
 
                 // Legend Camera (Orthographic for 2D-like appearance)
                 const legendViewportWidth = mountRef.current.clientWidth * viewportLegendWidth;
-                const orthoSize = 10;
+                // Base ortho size - will be adjusted dynamically based on a + b
+                const baseOrthoSize = 8;
                 const legendCamera = new THREE.OrthographicCamera(
-                    -orthoSize / 2, orthoSize / 2, // left, right
-                    orthoSize / 2, -orthoSize / 2, // top, bottom
+                    -baseOrthoSize / 2, baseOrthoSize / 2, // left, right (initial)
+                    baseOrthoSize / 2, -baseOrthoSize / 2, // top, bottom (initial)
                     0.1,
                     100
                 );
@@ -231,12 +232,14 @@
                 directionalLight.shadow.mapSize.height = 2048;
                 scene.add(directionalLight);
 
-                // Lights for legend scene
-                const legendAmbientLight = new THREE.AmbientLight(0xffffff, 0.7);
+                // Lights for legend scene (optimized for isometric view)
+                const legendAmbientLight = new THREE.AmbientLight(0xffffff, 0.5);
                 legendScene.add(legendAmbientLight);
 
-                const legendDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-                legendDirectionalLight.position.set(5, 5, 5);
+                // Directional light from upper corner to highlight 3D faces
+                const legendDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+                legendDirectionalLight.position.set(8, 10, 8);
+                legendDirectionalLight.castShadow = false; // Disable shadows for legend
                 legendScene.add(legendDirectionalLight);
 
                 // Grid helper (main scene only)
@@ -310,86 +313,94 @@
                     return { mesh, line, piece };
                 };
 
-                // Calculate normalized decomposed pieces for legend (vertical layout)
+                // Calculate normalized decomposed pieces for legend (vertical layout with isometric rotation)
                 const calculateLegendPieces = () => {
-                    const verticalSpacing = 2.5; // Space between groups vertically
-                    const horizontalSpacing = 1.5; // Space between pieces in same group
-                    const pieceScale = 0.6; // Scale factor for legend pieces
+                    // Isometric rotation angles (standard isometric view)
+                    const ISO_ROT_X = Math.PI / 6; // ~30 degrees
+                    const ISO_ROT_Y = Math.PI / 4; // 45 degrees
+                    
+                    const pieceScale = 0.5; // Scale factor for legend pieces (reduced for better fit)
+                    const maxDimension = Math.max(a, b) * pieceScale;
+                    const horizontalSpacing = maxDimension * 2.5; // Space between pieces in same group
+                    
+                    // Calculate vertical distribution (4 groups: a³, 3a²b, 3ab², b³)
+                    // Distribute evenly across viewport height, leaving margins
+                    const totalGroups = 4;
+                    const verticalMargin = 1.0; // Margin at top and bottom
+                    const verticalRange = 6.0; // Total vertical space available
+                    const groupSpacing = verticalRange / (totalGroups + 1);
+                    const startY = verticalRange / 2 - verticalMargin;
                     
                     const pieces = [];
-                    let currentY = 3.5; // Start from top
                     
                     // Grupo 1: Cubo a³ (1 pieza, centered)
                     pieces.push({
                         type: 'a³',
-                        position: [0, currentY, 0],
+                        position: [0, startY, 0],
                         size: [a * pieceScale, a * pieceScale, a * pieceScale],
                         color: 0x3b82f6, // Blue
-                        rotation: [0, 0, 0]
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
-                    currentY -= verticalSpacing;
                     
-                    // Grupo 2: Prismas a²b (3 piezas, normalized orientation)
+                    // Grupo 2: Prismas a²b (3 piezas, normalized orientation with isometric rotation)
                     // All three should look identical (same face forward)
-                    // Normalize: All will have dimensions [b, a, a] with same rotation
-                    // This represents 3 identical pieces of volume a²b
                     const a2bSize = [b * pieceScale, a * pieceScale, a * pieceScale];
+                    const currentY2 = startY - groupSpacing;
                     pieces.push({
                         type: 'a²b',
-                        position: [-horizontalSpacing * 1.5, currentY, 0],
+                        position: [-horizontalSpacing, currentY2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6, // Purple
-                        rotation: [0, 0, 0] // Normalized rotation - all identical
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
                     });
                     pieces.push({
                         type: 'a²b',
-                        position: [0, currentY, 0],
+                        position: [0, currentY2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6,
-                        rotation: [0, 0, 0] // Normalized rotation - all identical
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
                     });
                     pieces.push({
                         type: 'a²b',
-                        position: [horizontalSpacing * 1.5, currentY, 0],
+                        position: [horizontalSpacing, currentY2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6,
-                        rotation: [0, 0, 0] // Normalized rotation - all identical
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
                     });
-                    currentY -= verticalSpacing;
                     
-                    // Grupo 3: Prismas ab² (3 piezas, normalized orientation)
-                    // All three should look identical (same face forward)
+                    // Grupo 3: Prismas ab² (3 piezas, normalized orientation with isometric rotation)
                     const ab2Size = [b * pieceScale, b * pieceScale, a * pieceScale];
+                    const currentY3 = startY - groupSpacing * 2;
                     pieces.push({
                         type: 'ab²',
-                        position: [-horizontalSpacing * 1.5, currentY, 0],
+                        position: [-horizontalSpacing, currentY3, 0],
                         size: ab2Size,
                         color: 0x10b981, // Green
-                        rotation: [0, 0, 0] // Normalized rotation
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     pieces.push({
                         type: 'ab²',
-                        position: [0, currentY, 0],
+                        position: [0, currentY3, 0],
                         size: ab2Size,
                         color: 0x10b981,
-                        rotation: [0, 0, 0] // Normalized rotation
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     pieces.push({
                         type: 'ab²',
-                        position: [horizontalSpacing * 1.5, currentY, 0],
+                        position: [horizontalSpacing, currentY3, 0],
                         size: ab2Size,
                         color: 0x10b981,
-                        rotation: [0, 0, 0] // Normalized rotation
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
-                    currentY -= verticalSpacing;
                     
                     // Grupo 4: Cubo b³ (1 pieza, centered)
+                    const currentY4 = startY - groupSpacing * 3;
                     pieces.push({
                         type: 'b³',
-                        position: [0, currentY, 0],
+                        position: [0, currentY4, 0],
                         size: [b * pieceScale, b * pieceScale, b * pieceScale],
                         color: 0xef4444, // Red
-                        rotation: [0, 0, 0]
+                        rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     
                     return pieces;
@@ -465,12 +476,33 @@
                     renderer.setViewport(legendX, 0, legendWidth, height);
                     renderer.setScissor(legendX, 0, legendWidth, height);
                     
-                    // Update orthographic camera aspect ratio
+                    // Calculate dynamic orthographic frustum based on a + b
+                    // Account for isometric rotation which increases visible dimensions
+                    // Isometric view shows ~1.22x the original dimension (cos(30°) ≈ 0.866)
+                    const maxTotal = Math.max(a + b, 6); // Minimum size for small values
+                    const isometricScale = 1.3; // Factor to account for isometric rotation
+                    const pieceScale = 0.5;
+                    const maxPieceSize = maxTotal * pieceScale * isometricScale;
+                    
+                    // Add padding for spacing between pieces
+                    const horizontalPadding = maxPieceSize * 2.5; // Enough for 3 pieces side by side
+                    const verticalPadding = 4.0; // For vertical distribution
+                    
                     const legendAspect = legendWidth / height;
-                    legendCamera.left = -orthoSize / 2 * legendAspect;
-                    legendCamera.right = orthoSize / 2 * legendAspect;
-                    legendCamera.top = orthoSize / 2;
-                    legendCamera.bottom = -orthoSize / 2;
+                    
+                    // Calculate frustum dimensions to fit all content
+                    const frustumWidth = Math.max(horizontalPadding, 8); // Minimum width
+                    const frustumHeight = Math.max(verticalPadding, 8); // Minimum height
+                    
+                    // Apply aspect ratio correction
+                    const adjustedWidth = frustumWidth / legendAspect;
+                    const adjustedHeight = frustumHeight;
+                    
+                    // Set frustum bounds (centered)
+                    legendCamera.left = -adjustedWidth / 2;
+                    legendCamera.right = adjustedWidth / 2;
+                    legendCamera.top = adjustedHeight / 2;
+                    legendCamera.bottom = -adjustedHeight / 2;
                     legendCamera.updateProjectionMatrix();
                     
                     renderer.render(legendScene, legendCamera);
