@@ -34,7 +34,7 @@
         // ============================================
         // THREE.JS SCENE COMPONENT
         // ============================================
-        function Scene3D({ a, b, explosion }) {
+        function Scene3D({ a, b, explosion, isLegendVisible }) {
             const mountRef = useRef(null);
             const sceneRef = useRef(null);
             const animationFrameRef = useRef(null);
@@ -198,7 +198,7 @@
 
                 // Legend Scene (Static)
                 const legendScene = new THREE.Scene();
-                legendScene.background = new THREE.Color(0x1a1a1a);
+                legendScene.background = new THREE.Color(0x151520); // Slightly darker than main scene for visual separation
 
                 // Legend Camera (Orthographic for 2D-like appearance)
                 const legendViewportWidth = mountRef.current.clientWidth * viewportLegendWidth;
@@ -465,80 +465,102 @@
                     
                     const width = mountRef.current.clientWidth;
                     const height = mountRef.current.clientHeight;
-                    const mainWidth = width * viewportMainWidth;
-                    const legendWidth = width * viewportLegendWidth;
-                    const legendX = mainWidth;
+                    
+                    // Dynamic viewport sizing based on legend visibility
+                    let mainWidth, legendWidth, legendX;
+                    
+                    if (isLegendVisible) {
+                        mainWidth = width * viewportMainWidth;
+                        legendWidth = width * viewportLegendWidth;
+                        legendX = mainWidth;
+                    } else {
+                        mainWidth = width; // Full width when legend is hidden
+                        legendWidth = 0; // No legend viewport
+                        legendX = width;
+                    }
 
                     // Update camera aspect ratio for main viewport
                     camera.aspect = mainWidth / height;
                     camera.updateProjectionMatrix();
 
-                    // Render main viewport (left 75%)
+                    // Render main viewport (left portion or full width)
                     renderer.setViewport(0, 0, mainWidth, height);
                     renderer.setScissor(0, 0, mainWidth, height);
                     controls.update();
                     renderer.render(scene, camera);
 
-                    // Render legend viewport (right 25%)
-                    renderer.setViewport(legendX, 0, legendWidth, height);
-                    renderer.setScissor(legendX, 0, legendWidth, height);
+                    // Render legend viewport only if visible
+                    if (isLegendVisible && legendWidth > 0) {
+                        // Render vertical divider line (using a thin rectangle as separator)
+                        // We'll draw this using the renderer's clear color before rendering legend
+                        const originalClearColor = renderer.getClearColor(new THREE.Color());
+                        renderer.setViewport(legendX, 0, 1, height);
+                        renderer.setScissor(legendX, 0, 1, height);
+                        renderer.setClearColor(0x444444); // Divider color
+                        renderer.clear();
+                        renderer.setClearColor(originalClearColor); // Restore original clear color
+                        
+                        // Render legend viewport (right 25%)
+                        renderer.setViewport(legendX + 1, 0, legendWidth - 1, height);
+                        renderer.setScissor(legendX + 1, 0, legendWidth - 1, height);
                     
-                    // Calculate exact aspect ratio of legend viewport in pixels
-                    const legendAspect = legendWidth / height;
-                    
-                    // Calculate world-space bounds to contain all pieces
-                    // Use the same spacing calculation as in calculateLegendPieces
-                    const maxPossibleSize = Math.max(5.0, Math.max(a, b));
-                    const spacingUnit = maxPossibleSize * 1.5;
-                    const pieceScale = 0.4;
-                    const maxPieceWidth = Math.max(a, b) * pieceScale;
-                    const horizontalSpacing = maxPieceWidth * 3.0;
-                    const verticalSpacing = spacingUnit * 1.2;
-                    const topY = spacingUnit * 2.5;
-                    const bottomY = topY - verticalSpacing * 3;
-                    
-                    // Calculate required world-space dimensions
-                    // Horizontal: 3 pieces side by side with spacing
-                    const worldWidth = horizontalSpacing * 2 + maxPieceWidth * 2;
-                    // Vertical: from topY to bottomY, plus margins
-                    const worldHeight = topY - bottomY + spacingUnit * 1.5; // Add top/bottom margins
-                    
-                    // CRITICAL: Aspect ratio lock - ensure a 1x1x1 cube appears square
-                    // The frustum height and width must respect the viewport aspect ratio
-                    // If legendAspect < 1 (viewport is taller than wide), adjust width
-                    // If legendAspect > 1 (viewport is wider than tall), adjust height
-                    
-                    let frustumWidth, frustumHeight;
-                    
-                    // Calculate base frustum dimensions based on content
-                    const contentAspect = worldWidth / worldHeight;
-                    
-                    if (legendAspect > contentAspect) {
-                        // Viewport is wider than content aspect ratio
-                        // Adjust width to match viewport aspect
-                        frustumHeight = worldHeight;
-                        frustumWidth = worldHeight * legendAspect;
-                    } else {
-                        // Viewport is taller than content aspect ratio
-                        // Adjust height to match viewport aspect
-                        frustumWidth = worldWidth;
-                        frustumHeight = worldWidth / legendAspect;
+                        // Calculate exact aspect ratio of legend viewport in pixels
+                        const legendAspect = (legendWidth - 1) / height;
+                        
+                        // Calculate world-space bounds to contain all pieces
+                        // Use the same spacing calculation as in calculateLegendPieces
+                        const maxPossibleSize = Math.max(5.0, Math.max(a, b));
+                        const spacingUnit = maxPossibleSize * 1.5;
+                        const pieceScale = 0.4;
+                        const maxPieceWidth = Math.max(a, b) * pieceScale;
+                        const horizontalSpacing = maxPieceWidth * 3.0;
+                        const verticalSpacing = spacingUnit * 1.2;
+                        const topY = spacingUnit * 2.5;
+                        const bottomY = topY - verticalSpacing * 3;
+                        
+                        // Calculate required world-space dimensions
+                        // Horizontal: 3 pieces side by side with spacing
+                        const worldWidth = horizontalSpacing * 2 + maxPieceWidth * 2;
+                        // Vertical: from topY to bottomY, plus margins
+                        const worldHeight = topY - bottomY + spacingUnit * 1.5; // Add top/bottom margins
+                        
+                        // CRITICAL: Aspect ratio lock - ensure a 1x1x1 cube appears square
+                        // The frustum height and width must respect the viewport aspect ratio
+                        // If legendAspect < 1 (viewport is taller than wide), adjust width
+                        // If legendAspect > 1 (viewport is wider than tall), adjust height
+                        
+                        let frustumWidth, frustumHeight;
+                        
+                        // Calculate base frustum dimensions based on content
+                        const contentAspect = worldWidth / worldHeight;
+                        
+                        if (legendAspect > contentAspect) {
+                            // Viewport is wider than content aspect ratio
+                            // Adjust width to match viewport aspect
+                            frustumHeight = worldHeight;
+                            frustumWidth = worldHeight * legendAspect;
+                        } else {
+                            // Viewport is taller than content aspect ratio
+                            // Adjust height to match viewport aspect
+                            frustumWidth = worldWidth;
+                            frustumHeight = worldWidth / legendAspect;
+                        }
+                        
+                        // Add padding to ensure content doesn't touch edges
+                        const paddingFactor = 1.2;
+                        frustumWidth *= paddingFactor;
+                        frustumHeight *= paddingFactor;
+                        
+                        // Set frustum bounds (centered at origin)
+                        // This ensures a cube 1x1x1 appears perfectly square on screen
+                        legendCamera.left = -frustumWidth / 2;
+                        legendCamera.right = frustumWidth / 2;
+                        legendCamera.top = frustumHeight / 2;
+                        legendCamera.bottom = -frustumHeight / 2;
+                        legendCamera.updateProjectionMatrix();
+                        
+                        renderer.render(legendScene, legendCamera);
                     }
-                    
-                    // Add padding to ensure content doesn't touch edges
-                    const paddingFactor = 1.2;
-                    frustumWidth *= paddingFactor;
-                    frustumHeight *= paddingFactor;
-                    
-                    // Set frustum bounds (centered at origin)
-                    // This ensures a cube 1x1x1 appears perfectly square on screen
-                    legendCamera.left = -frustumWidth / 2;
-                    legendCamera.right = frustumWidth / 2;
-                    legendCamera.top = frustumHeight / 2;
-                    legendCamera.bottom = -frustumHeight / 2;
-                    legendCamera.updateProjectionMatrix();
-                    
-                    renderer.render(legendScene, legendCamera);
                 };
                 animate();
 
@@ -594,6 +616,7 @@
             const [a, setA] = useState(2.0);
             const [b, setB] = useState(1.5);
             const [explosion, setExplosion] = useState(0.0);
+            const [isLegendVisible, setIsLegendVisible] = useState(true);
 
             // Calculate volumes
             const volumes = useMemo(() => {
@@ -757,7 +780,17 @@
 
                     {/* Right Panel - 3D Scene */}
                     <main className="flex-1 relative">
-                        <Scene3D a={a} b={b} explosion={explosion} />
+                        {/* Toggle Button for Legend */}
+                        <button
+                            id="btn-toggle-legend"
+                            onClick={() => setIsLegendVisible(!isLegendVisible)}
+                            className="absolute top-4 right-4 z-50 bg-gray-800 hover:bg-gray-700 text-yellow-400 border border-gray-600 rounded-lg px-4 py-2 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 flex items-center gap-2 text-sm font-semibold"
+                            title={isLegendVisible ? "Ocultar Leyenda" : "Mostrar Leyenda"}
+                        >
+                            <span className="text-lg">{isLegendVisible ? '◫' : '≡'}</span>
+                            <span>{isLegendVisible ? 'Ocultar' : 'Mostrar'} Leyenda</span>
+                        </button>
+                        <Scene3D a={a} b={b} explosion={explosion} isLegendVisible={isLegendVisible} />
                     </main>
                 </div>
             );
