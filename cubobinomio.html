@@ -39,49 +39,137 @@
             const sceneRef = useRef(null);
             const animationFrameRef = useRef(null);
 
+            // Calculate decomposed pieces for the legend (always separated, not affected by explosion)
+            const decomposedPieces = useMemo(() => {
+                const separation = 1.2; // Space between pieces in the same group
+                const groupSeparation = 3.0; // Space between groups
+                const legendOffsetX = 8.0; // X offset to position legend to the right
+                const legendY = -3.5; // Y position (below the main cube)
+                
+                let currentX = legendOffsetX;
+                
+                const pieces = [];
+                
+                // Grupo 1: Cubo a³ (1 pieza)
+                pieces.push({
+                    type: 'a³',
+                    position: [currentX, legendY, 0],
+                    size: [a, a, a],
+                    color: 0x3b82f6 // Blue
+                });
+                currentX += a + separation;
+                
+                // Grupo 2: Prismas a²b (3 piezas)
+                // a²b along X axis
+                pieces.push({
+                    type: 'a²b',
+                    position: [currentX, legendY, 0],
+                    size: [b, a, a],
+                    color: 0x8b5cf6 // Purple
+                });
+                currentX += b + separation * 0.5;
+                
+                // a²b along Y axis
+                pieces.push({
+                    type: 'a²b',
+                    position: [currentX, legendY, 0],
+                    size: [a, b, a],
+                    color: 0x8b5cf6
+                });
+                currentX += a + separation * 0.5;
+                
+                // a²b along Z axis
+                pieces.push({
+                    type: 'a²b',
+                    position: [currentX, legendY, 0],
+                    size: [a, a, b],
+                    color: 0x8b5cf6
+                });
+                currentX += a + groupSeparation;
+                
+                // Grupo 3: Prismas ab² (3 piezas)
+                // ab² XY plane
+                pieces.push({
+                    type: 'ab²',
+                    position: [currentX, legendY, 0],
+                    size: [b, b, a],
+                    color: 0x10b981 // Green
+                });
+                currentX += b + separation * 0.5;
+                
+                // ab² XZ plane
+                pieces.push({
+                    type: 'ab²',
+                    position: [currentX, legendY, 0],
+                    size: [b, a, b],
+                    color: 0x10b981
+                });
+                currentX += b + separation * 0.5;
+                
+                // ab² YZ plane
+                pieces.push({
+                    type: 'ab²',
+                    position: [currentX, legendY, 0],
+                    size: [a, b, b],
+                    color: 0x10b981
+                });
+                currentX += a + groupSeparation;
+                
+                // Grupo 4: Cubo b³ (1 pieza)
+                pieces.push({
+                    type: 'b³',
+                    position: [currentX, legendY, 0],
+                    size: [b, b, b],
+                    color: 0xef4444 // Red
+                });
+                
+                return pieces;
+            }, [a, b]);
+
             // Calculate piece positions and geometries
-            // The cube (a+b)³ is centered at origin, so it spans from -(a+b)/2 to (a+b)/2
+            // The cube (a+b)³ is shifted left to make room for the legend
             const pieces = useMemo(() => {
                 const total = a + b;
                 const halfTotal = total / 2;
                 const offset = explosion * 0.8; // Explosion multiplier
+                const mainCubeOffsetX = -4.0; // Shift main cube left to make room for legend
                 
                 // Base positions (when explosion = 0, pieces form perfect cube)
-                // Cube a³: bottom-left-back corner
-                const a3BaseX = -halfTotal + a/2;
+                // Cube a³: bottom-left-back corner (shifted left)
+                const a3BaseX = mainCubeOffsetX - halfTotal + a/2;
                 const a3BaseY = -halfTotal + a/2;
                 const a3BaseZ = -halfTotal + a/2;
                 
                 // Prism a²b along X axis (extends from a³ in +X direction)
-                const a2bXBaseX = -halfTotal + a + b/2;
+                const a2bXBaseX = mainCubeOffsetX - halfTotal + a + b/2;
                 const a2bXBaseY = -halfTotal + a/2;
                 const a2bXBaseZ = -halfTotal + a/2;
                 
                 // Prism a²b along Y axis (extends from a³ in +Y direction)
-                const a2bYBaseX = -halfTotal + a/2;
+                const a2bYBaseX = mainCubeOffsetX - halfTotal + a/2;
                 const a2bYBaseY = -halfTotal + a + b/2;
                 const a2bYBaseZ = -halfTotal + a/2;
                 
                 // Prism a²b along Z axis (extends from a³ in +Z direction)
-                const a2bZBaseX = -halfTotal + a/2;
+                const a2bZBaseX = mainCubeOffsetX - halfTotal + a/2;
                 const a2bZBaseY = -halfTotal + a/2;
                 const a2bZBaseZ = -halfTotal + a + b/2;
                 
                 // Prism ab² at corner (extends from a²b prisms)
-                const ab2XYBaseX = -halfTotal + a + b/2;
+                const ab2XYBaseX = mainCubeOffsetX - halfTotal + a + b/2;
                 const ab2XYBaseY = -halfTotal + a + b/2;
                 const ab2XYBaseZ = -halfTotal + a/2;
                 
-                const ab2XZBaseX = -halfTotal + a + b/2;
+                const ab2XZBaseX = mainCubeOffsetX - halfTotal + a + b/2;
                 const ab2XZBaseY = -halfTotal + a/2;
                 const ab2XZBaseZ = -halfTotal + a + b/2;
                 
-                const ab2YZBaseX = -halfTotal + a/2;
+                const ab2YZBaseX = mainCubeOffsetX - halfTotal + a/2;
                 const ab2YZBaseY = -halfTotal + a + b/2;
                 const ab2YZBaseZ = -halfTotal + a + b/2;
                 
-                // Cube b³: top-right-front corner
-                const b3BaseX = halfTotal - b/2;
+                // Cube b³: top-right-front corner (shifted left)
+                const b3BaseX = mainCubeOffsetX + halfTotal - b/2;
                 const b3BaseY = halfTotal - b/2;
                 const b3BaseZ = halfTotal - b/2;
 
@@ -181,15 +269,15 @@
                 scene.background = new THREE.Color(0x1a1a2e);
                 sceneRef.current = scene;
 
-                // Camera
+                // Camera (adjusted to see both main cube and legend)
                 const camera = new THREE.PerspectiveCamera(
                     75,
                     mountRef.current.clientWidth / mountRef.current.clientHeight,
                     0.1,
                     1000
                 );
-                camera.position.set(8, 8, 8);
-                camera.lookAt(0, 0, 0);
+                camera.position.set(10, 6, 10);
+                camera.lookAt(2, 0, 0); // Look between main cube and legend
 
                 // Renderer
                 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -228,6 +316,8 @@
 
                 // Create pieces
                 const pieceMeshes = [];
+                const decomposedMeshes = [];
+                
                 const createPiece = (piece) => {
                     const geometry = new THREE.BoxGeometry(...piece.size);
                     const material = new THREE.MeshStandardMaterial({
@@ -255,9 +345,30 @@
                     return { mesh, line, piece };
                 };
 
+                // Function to create decomposed view (legend)
+                const createDecomposedView = () => {
+                    decomposedPieces.forEach(piece => {
+                        const obj = createPiece(piece);
+                        decomposedMeshes.push(obj);
+                    });
+                };
+
+                // Function to remove decomposed view
+                const removeDecomposedView = () => {
+                    decomposedMeshes.forEach(({ mesh, line }) => {
+                        scene.remove(mesh);
+                        scene.remove(line);
+                        mesh.geometry.dispose();
+                        mesh.material.dispose();
+                        line.geometry.dispose();
+                        line.material.dispose();
+                    });
+                    decomposedMeshes.length = 0;
+                };
+
                 // Update function
                 const updatePieces = () => {
-                    // Remove old pieces
+                    // Remove old main pieces
                     pieceMeshes.forEach(({ mesh, line }) => {
                         scene.remove(mesh);
                         scene.remove(line);
@@ -268,11 +379,17 @@
                     });
                     pieceMeshes.length = 0;
 
-                    // Create new pieces
+                    // Remove old decomposed pieces
+                    removeDecomposedView();
+
+                    // Create new main pieces
                     pieces.forEach(piece => {
                         const obj = createPiece(piece);
                         pieceMeshes.push(obj);
                     });
+
+                    // Create new decomposed pieces
+                    createDecomposedView();
                 };
 
                 updatePieces();
@@ -307,12 +424,20 @@
                         line.geometry.dispose();
                         line.material.dispose();
                     });
+                    decomposedMeshes.forEach(({ mesh, line }) => {
+                        scene.remove(mesh);
+                        scene.remove(line);
+                        mesh.geometry.dispose();
+                        mesh.material.dispose();
+                        line.geometry.dispose();
+                        line.material.dispose();
+                    });
                     renderer.dispose();
                     if (mountRef.current && renderer.domElement.parentNode) {
                         mountRef.current.removeChild(renderer.domElement);
                     }
                 };
-            }, [pieces]);
+            }, [pieces, decomposedPieces]);
 
             return <div ref={mountRef} className="w-full h-full" />;
         }
