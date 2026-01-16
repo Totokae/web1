@@ -315,28 +315,35 @@
 
                 // Calculate normalized decomposed pieces for legend (vertical layout with isometric rotation)
                 const calculateLegendPieces = () => {
-                    // Isometric rotation angles (standard isometric view)
-                    const ISO_ROT_X = Math.PI / 6; // ~30 degrees
+                    // Isometric rotation angles (corrected for better 3D view)
+                    const ISO_ROT_X = Math.PI / 5; // ~36 degrees (less vertical, more balanced)
                     const ISO_ROT_Y = Math.PI / 4; // 45 degrees
                     
-                    const pieceScale = 0.5; // Scale factor for legend pieces (reduced for better fit)
-                    const maxDimension = Math.max(a, b) * pieceScale;
-                    const horizontalSpacing = maxDimension * 2.5; // Space between pieces in same group
+                    const pieceScale = 0.4; // Scale factor for legend pieces
                     
-                    // Calculate vertical distribution (4 groups: a³, 3a²b, 3ab², b³)
-                    // Distribute evenly across viewport height, leaving margins
-                    const totalGroups = 4;
-                    const verticalMargin = 1.0; // Margin at top and bottom
-                    const verticalRange = 6.0; // Total vertical space available
-                    const groupSpacing = verticalRange / (totalGroups + 1);
-                    const startY = verticalRange / 2 - verticalMargin;
+                    // Calculate dynamic spacing unit based on maximum possible piece size
+                    // This ensures pieces never overlap, even at maximum slider values
+                    const maxPossibleSize = Math.max(5.0, Math.max(a, b)); // Max slider value is 5.0
+                    const spacingUnit = maxPossibleSize * 1.5; // Dynamic spacing multiplier
                     
+                    // Horizontal spacing between 3 pieces in same group
+                    const maxPieceWidth = Math.max(a, b) * pieceScale;
+                    const horizontalSpacing = maxPieceWidth * 3.0; // Generous horizontal spacing
+                    
+                    // Vertical spacing between groups (dynamic, based on piece sizes)
+                    // Account for isometric rotation which increases visible height
+                    const maxPieceHeight = Math.max(a, b) * pieceScale;
+                    const verticalSpacing = spacingUnit * 1.2; // Large vertical gap between groups
+                    
+                    // Starting position: distribute groups from top to bottom
+                    // Use negative Y values going down (standard in 3D)
+                    const topY = spacingUnit * 2.5; // Start high enough from origin
                     const pieces = [];
                     
                     // Grupo 1: Cubo a³ (1 pieza, centered)
                     pieces.push({
                         type: 'a³',
-                        position: [0, startY, 0],
+                        position: [0, topY, 0],
                         size: [a * pieceScale, a * pieceScale, a * pieceScale],
                         color: 0x3b82f6, // Blue
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
@@ -345,24 +352,24 @@
                     // Grupo 2: Prismas a²b (3 piezas, normalized orientation with isometric rotation)
                     // All three should look identical (same face forward)
                     const a2bSize = [b * pieceScale, a * pieceScale, a * pieceScale];
-                    const currentY2 = startY - groupSpacing;
+                    const y2 = topY - verticalSpacing;
                     pieces.push({
                         type: 'a²b',
-                        position: [-horizontalSpacing, currentY2, 0],
+                        position: [-horizontalSpacing, y2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6, // Purple
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
                     });
                     pieces.push({
                         type: 'a²b',
-                        position: [0, currentY2, 0],
+                        position: [0, y2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6,
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
                     });
                     pieces.push({
                         type: 'a²b',
-                        position: [horizontalSpacing, currentY2, 0],
+                        position: [horizontalSpacing, y2, 0],
                         size: a2bSize,
                         color: 0x8b5cf6,
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation - all identical
@@ -370,34 +377,34 @@
                     
                     // Grupo 3: Prismas ab² (3 piezas, normalized orientation with isometric rotation)
                     const ab2Size = [b * pieceScale, b * pieceScale, a * pieceScale];
-                    const currentY3 = startY - groupSpacing * 2;
+                    const y3 = topY - verticalSpacing * 2;
                     pieces.push({
                         type: 'ab²',
-                        position: [-horizontalSpacing, currentY3, 0],
+                        position: [-horizontalSpacing, y3, 0],
                         size: ab2Size,
                         color: 0x10b981, // Green
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     pieces.push({
                         type: 'ab²',
-                        position: [0, currentY3, 0],
+                        position: [0, y3, 0],
                         size: ab2Size,
                         color: 0x10b981,
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     pieces.push({
                         type: 'ab²',
-                        position: [horizontalSpacing, currentY3, 0],
+                        position: [horizontalSpacing, y3, 0],
                         size: ab2Size,
                         color: 0x10b981,
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
                     });
                     
                     // Grupo 4: Cubo b³ (1 pieza, centered)
-                    const currentY4 = startY - groupSpacing * 3;
+                    const y4 = topY - verticalSpacing * 3;
                     pieces.push({
                         type: 'b³',
-                        position: [0, currentY4, 0],
+                        position: [0, y4, 0],
                         size: [b * pieceScale, b * pieceScale, b * pieceScale],
                         color: 0xef4444, // Red
                         rotation: [ISO_ROT_X, ISO_ROT_Y, 0] // Isometric rotation
@@ -476,33 +483,59 @@
                     renderer.setViewport(legendX, 0, legendWidth, height);
                     renderer.setScissor(legendX, 0, legendWidth, height);
                     
-                    // Calculate dynamic orthographic frustum based on a + b
-                    // Account for isometric rotation which increases visible dimensions
-                    // Isometric view shows ~1.22x the original dimension (cos(30°) ≈ 0.866)
-                    const maxTotal = Math.max(a + b, 6); // Minimum size for small values
-                    const isometricScale = 1.3; // Factor to account for isometric rotation
-                    const pieceScale = 0.5;
-                    const maxPieceSize = maxTotal * pieceScale * isometricScale;
-                    
-                    // Add padding for spacing between pieces
-                    const horizontalPadding = maxPieceSize * 2.5; // Enough for 3 pieces side by side
-                    const verticalPadding = 4.0; // For vertical distribution
-                    
+                    // Calculate exact aspect ratio of legend viewport in pixels
                     const legendAspect = legendWidth / height;
                     
-                    // Calculate frustum dimensions to fit all content
-                    const frustumWidth = Math.max(horizontalPadding, 8); // Minimum width
-                    const frustumHeight = Math.max(verticalPadding, 8); // Minimum height
+                    // Calculate world-space bounds to contain all pieces
+                    // Use the same spacing calculation as in calculateLegendPieces
+                    const maxPossibleSize = Math.max(5.0, Math.max(a, b));
+                    const spacingUnit = maxPossibleSize * 1.5;
+                    const pieceScale = 0.4;
+                    const maxPieceWidth = Math.max(a, b) * pieceScale;
+                    const horizontalSpacing = maxPieceWidth * 3.0;
+                    const verticalSpacing = spacingUnit * 1.2;
+                    const topY = spacingUnit * 2.5;
+                    const bottomY = topY - verticalSpacing * 3;
                     
-                    // Apply aspect ratio correction
-                    const adjustedWidth = frustumWidth / legendAspect;
-                    const adjustedHeight = frustumHeight;
+                    // Calculate required world-space dimensions
+                    // Horizontal: 3 pieces side by side with spacing
+                    const worldWidth = horizontalSpacing * 2 + maxPieceWidth * 2;
+                    // Vertical: from topY to bottomY, plus margins
+                    const worldHeight = topY - bottomY + spacingUnit * 1.5; // Add top/bottom margins
                     
-                    // Set frustum bounds (centered)
-                    legendCamera.left = -adjustedWidth / 2;
-                    legendCamera.right = adjustedWidth / 2;
-                    legendCamera.top = adjustedHeight / 2;
-                    legendCamera.bottom = -adjustedHeight / 2;
+                    // CRITICAL: Aspect ratio lock - ensure a 1x1x1 cube appears square
+                    // The frustum height and width must respect the viewport aspect ratio
+                    // If legendAspect < 1 (viewport is taller than wide), adjust width
+                    // If legendAspect > 1 (viewport is wider than tall), adjust height
+                    
+                    let frustumWidth, frustumHeight;
+                    
+                    // Calculate base frustum dimensions based on content
+                    const contentAspect = worldWidth / worldHeight;
+                    
+                    if (legendAspect > contentAspect) {
+                        // Viewport is wider than content aspect ratio
+                        // Adjust width to match viewport aspect
+                        frustumHeight = worldHeight;
+                        frustumWidth = worldHeight * legendAspect;
+                    } else {
+                        // Viewport is taller than content aspect ratio
+                        // Adjust height to match viewport aspect
+                        frustumWidth = worldWidth;
+                        frustumHeight = worldWidth / legendAspect;
+                    }
+                    
+                    // Add padding to ensure content doesn't touch edges
+                    const paddingFactor = 1.2;
+                    frustumWidth *= paddingFactor;
+                    frustumHeight *= paddingFactor;
+                    
+                    // Set frustum bounds (centered at origin)
+                    // This ensures a cube 1x1x1 appears perfectly square on screen
+                    legendCamera.left = -frustumWidth / 2;
+                    legendCamera.right = frustumWidth / 2;
+                    legendCamera.top = frustumHeight / 2;
+                    legendCamera.bottom = -frustumHeight / 2;
                     legendCamera.updateProjectionMatrix();
                     
                     renderer.render(legendScene, legendCamera);
