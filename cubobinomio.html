@@ -38,6 +38,12 @@
             const mountRef = useRef(null);
             const sceneRef = useRef(null);
             const animationFrameRef = useRef(null);
+            const isLegendVisibleRef = useRef(isLegendVisible);
+            
+            // Keep ref in sync with prop
+            useEffect(() => {
+                isLegendVisibleRef.current = isLegendVisible;
+            }, [isLegendVisible]);
 
             // Calculate piece positions and geometries
             // The cube (a+b)³ is centered in the main viewport
@@ -266,10 +272,12 @@
                 
                 // Mouse event handler to restrict controls
                 const onMouseMove = (event) => {
+                    const legendVisible = isLegendVisibleRef.current;
                     const rect = mountRef.current.getBoundingClientRect();
                     const mouseX = event.clientX - rect.left;
                     const relativeX = mouseX / mountRef.current.clientWidth;
-                    controls.enabled = relativeX < viewportMainWidth;
+                    // If legend is hidden, controls work everywhere. Otherwise, restrict to main viewport
+                    controls.enabled = !legendVisible || relativeX < viewportMainWidth;
                 };
                 window.addEventListener('mousemove', onMouseMove);
 
@@ -467,9 +475,11 @@
                     const height = mountRef.current.clientHeight;
                     
                     // Dynamic viewport sizing based on legend visibility
+                    // Use ref to get current value without re-running useEffect
+                    const legendVisible = isLegendVisibleRef.current;
                     let mainWidth, legendWidth, legendX;
                     
-                    if (isLegendVisible) {
+                    if (legendVisible) {
                         mainWidth = width * viewportMainWidth;
                         legendWidth = width * viewportLegendWidth;
                         legendX = mainWidth;
@@ -490,7 +500,7 @@
                     renderer.render(scene, camera);
 
                     // Render legend viewport only if visible
-                    if (isLegendVisible && legendWidth > 0) {
+                    if (legendVisible && legendWidth > 0) {
                         // Render vertical divider line (using a thin rectangle as separator)
                         // We'll draw this using the renderer's clear color before rendering legend
                         const originalClearColor = renderer.getClearColor(new THREE.Color());
