@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -34,16 +35,39 @@
         // ============================================
         // THREE.JS SCENE COMPONENT
         // ============================================
-        function Scene3D({ a, b, explosion, isLegendVisible }) {
+        function Scene3D({ a, b, explosion, isLegendVisible, isRotationActive, showMeasurements }) {
             const mountRef = useRef(null);
             const sceneRef = useRef(null);
             const animationFrameRef = useRef(null);
             const isLegendVisibleRef = useRef(isLegendVisible);
+            const isRotationActiveRef = useRef(isRotationActive);
+            const showMeasurementsRef = useRef(showMeasurements);
+            const controlsRef = useRef(null);
+            const labelRendererRef = useRef(null);
+            const measurementLabelsRef = useRef([]);
+            const updateMeasurementLabelsRef = useRef(null);
             
-            // Keep ref in sync with prop
+            // Keep refs in sync with props
             useEffect(() => {
                 isLegendVisibleRef.current = isLegendVisible;
             }, [isLegendVisible]);
+            
+            useEffect(() => {
+                isRotationActiveRef.current = isRotationActive;
+                if (controlsRef.current) {
+                    controlsRef.current.autoRotate = isRotationActive;
+                }
+                if (updateMeasurementLabelsRef.current) {
+                    updateMeasurementLabelsRef.current();
+                }
+            }, [isRotationActive]);
+            
+            useEffect(() => {
+                showMeasurementsRef.current = showMeasurements;
+                if (updateMeasurementLabelsRef.current) {
+                    updateMeasurementLabelsRef.current();
+                }
+            }, [showMeasurements]);
 
             // Calculate piece positions and geometries
             // The cube (a+b)³ is centered in the main viewport
@@ -227,6 +251,15 @@
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 mountRef.current.appendChild(renderer.domElement);
 
+                // CSS2DRenderer for text labels
+                const labelRenderer = new THREE.CSS2DRenderer();
+                labelRenderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+                labelRenderer.domElement.style.position = 'absolute';
+                labelRenderer.domElement.style.top = '0';
+                labelRenderer.domElement.style.pointerEvents = 'none';
+                mountRef.current.appendChild(labelRenderer.domElement);
+                labelRendererRef.current = labelRenderer;
+
                 // Lights for main scene
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
                 scene.add(ambientLight);
@@ -260,10 +293,11 @@
                 const controls = new THREE.OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
                 controls.dampingFactor = 0.05;
-                controls.autoRotate = true;
+                controls.autoRotate = isRotationActiveRef.current;
                 controls.autoRotateSpeed = 1.0;
                 controls.minDistance = 5;
                 controls.maxDistance = 20;
+                controlsRef.current = controls;
                 
                 // Restrict controls to main viewport
                 controls.addEventListener('start', () => {
@@ -442,6 +476,61 @@
                     });
                 };
 
+                // Function to create/update measurement labels
+                const updateMeasurementLabels = () => {
+                    // Remove old labels
+                    measurementLabelsRef.current.forEach(label => {
+                        scene.remove(label);
+                    });
+                    measurementLabelsRef.current = [];
+
+                    // Only show measurements when rotation is stopped and showMeasurements is true
+                    if (!isRotationActiveRef.current && showMeasurementsRef.current) {
+                        const total = a + b;
+                        const halfTotal = total / 2;
+                        const offset = 0.3; // Offset from edges
+
+                        // Helper function to create a label
+                        const createLabel = (text, position) => {
+                            const labelDiv = document.createElement('div');
+                            labelDiv.className = 'measurement-label';
+                            labelDiv.textContent = text;
+                            labelDiv.style.color = '#333';
+                            labelDiv.style.fontSize = '14px';
+                            labelDiv.style.fontWeight = 'bold';
+                            labelDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                            labelDiv.style.padding = '4px 8px';
+                            labelDiv.style.borderRadius = '4px';
+                            labelDiv.style.pointerEvents = 'none';
+                            labelDiv.style.userSelect = 'none';
+                            labelDiv.style.border = '1px solid #333';
+                            
+                            const label = new THREE.CSS2DObject(labelDiv);
+                            label.position.set(...position);
+                            scene.add(label);
+                            measurementLabelsRef.current.push(label);
+                        };
+
+                        // Width measurements (X axis) - on the front face
+                        // Label for 'a' on the left side
+                        createLabel(a.toFixed(2), [-halfTotal + a/2, -halfTotal - offset, halfTotal]);
+                        // Label for 'b' on the right side
+                        createLabel(b.toFixed(2), [halfTotal - b/2, -halfTotal - offset, halfTotal]);
+
+                        // Height measurements (Y axis) - on the right face
+                        // Label for 'a' on the bottom
+                        createLabel(a.toFixed(2), [halfTotal + offset, -halfTotal + a/2, halfTotal]);
+                        // Label for 'b' on the top
+                        createLabel(b.toFixed(2), [halfTotal + offset, halfTotal - b/2, halfTotal]);
+
+                        // Depth measurements (Z axis) - on the top face
+                        // Label for 'a' on the front
+                        createLabel(a.toFixed(2), [halfTotal, halfTotal + offset, halfTotal - a/2]);
+                        // Label for 'b' on the back
+                        createLabel(b.toFixed(2), [halfTotal, halfTotal + offset, -halfTotal + b/2]);
+                    }
+                };
+
                 // Update function
                 const updatePieces = () => {
                     // Remove old main pieces
@@ -463,7 +552,13 @@
 
                     // Update legend view
                     updateLegendView();
+                    
+                    // Update measurement labels
+                    updateMeasurementLabels();
                 };
+                
+                // Store updateMeasurementLabels in ref so it can be called from useEffect
+                updateMeasurementLabelsRef.current = updateMeasurementLabels;
 
                 updatePieces();
 
@@ -498,6 +593,12 @@
                     renderer.setScissor(0, 0, mainWidth, height);
                     controls.update();
                     renderer.render(scene, camera);
+                    
+                    // Render measurement labels
+                    if (labelRendererRef.current) {
+                        labelRendererRef.current.setSize(width, height);
+                        labelRendererRef.current.render(scene, camera);
+                    }
 
                     // Render legend viewport only if visible
                     if (legendVisible && legendWidth > 0) {
@@ -579,6 +680,9 @@
                     const width = mountRef.current.clientWidth;
                     const height = mountRef.current.clientHeight;
                     renderer.setSize(width, height);
+                    if (labelRendererRef.current) {
+                        labelRendererRef.current.setSize(width, height);
+                    }
                     
                     const mainWidth = width * viewportMainWidth;
                     camera.aspect = mainWidth / height;
@@ -609,6 +713,13 @@
                         line.geometry.dispose();
                         line.material.dispose();
                     });
+                    measurementLabelsRef.current.forEach(label => {
+                        scene.remove(label);
+                    });
+                    measurementLabelsRef.current = [];
+                    if (labelRendererRef.current && labelRendererRef.current.domElement.parentNode) {
+                        mountRef.current.removeChild(labelRendererRef.current.domElement);
+                    }
                     renderer.dispose();
                     if (mountRef.current && renderer.domElement.parentNode) {
                         mountRef.current.removeChild(renderer.domElement);
@@ -627,6 +738,8 @@
             const [b, setB] = useState(1.5);
             const [explosion, setExplosion] = useState(0.0);
             const [isLegendVisible, setIsLegendVisible] = useState(true);
+            const [isRotationActive, setIsRotationActive] = useState(true);
+            const [showMeasurements, setShowMeasurements] = useState(false);
 
             // Calculate volumes
             const volumes = useMemo(() => {
@@ -795,7 +908,32 @@
                             <span className="text-lg">{isLegendVisible ? '◫' : '≡'}</span>
                             <span>{isLegendVisible ? 'Ocultar' : 'Mostrar'} Leyenda</span>
                         </button>
-                        <Scene3D a={a} b={b} explosion={explosion} isLegendVisible={isLegendVisible} />
+                        
+                        {/* Toggle Button for Rotation */}
+                        <button
+                            onClick={() => {
+                                setIsRotationActive(!isRotationActive);
+                                if (!isRotationActive) {
+                                    setShowMeasurements(true);
+                                } else {
+                                    setShowMeasurements(false);
+                                }
+                            }}
+                            className="absolute top-4 right-48 z-50 bg-gray-800 hover:bg-gray-700 text-yellow-400 border border-gray-600 rounded-lg px-4 py-2 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 flex items-center gap-2 text-sm font-semibold"
+                            title={isRotationActive ? "Detener Rotación" : "Iniciar Rotación"}
+                        >
+                            <span className="text-lg">{isRotationActive ? '⏸' : '▶'}</span>
+                            <span>{isRotationActive ? 'Detener' : 'Iniciar'} Rotación</span>
+                        </button>
+                        
+                        <Scene3D 
+                            a={a} 
+                            b={b} 
+                            explosion={explosion} 
+                            isLegendVisible={isLegendVisible}
+                            isRotationActive={isRotationActive}
+                            showMeasurements={showMeasurements}
+                        />
                     </main>
                 </div>
             );
