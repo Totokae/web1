@@ -46,6 +46,7 @@
             const labelRendererRef = useRef(null);
             const measurementLabelsRef = useRef([]);
             const updateMeasurementLabelsRef = useRef(null);
+            const updateLabelPositionsRef = useRef(null);
             
             // Keep refs in sync with props
             useEffect(() => {
@@ -251,14 +252,18 @@
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 mountRef.current.appendChild(renderer.domElement);
 
-                // CSS2DRenderer for text labels
-                const labelRenderer = new THREE.CSS2DRenderer();
-                labelRenderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-                labelRenderer.domElement.style.position = 'absolute';
-                labelRenderer.domElement.style.top = '0';
-                labelRenderer.domElement.style.pointerEvents = 'none';
-                mountRef.current.appendChild(labelRenderer.domElement);
-                labelRendererRef.current = labelRenderer;
+                // Container for measurement labels (HTML overlay)
+                const labelsContainer = document.createElement('div');
+                labelsContainer.style.position = 'absolute';
+                labelsContainer.style.top = '0';
+                labelsContainer.style.left = '0';
+                labelsContainer.style.width = '100%';
+                labelsContainer.style.height = '100%';
+                labelsContainer.style.pointerEvents = 'none';
+                labelsContainer.style.zIndex = '10';
+                labelsContainer.style.overflow = 'hidden';
+                mountRef.current.appendChild(labelsContainer);
+                labelRendererRef.current = { container: labelsContainer };
 
                 // Lights for main scene
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -479,22 +484,23 @@
                 // Function to create/update measurement labels
                 const updateMeasurementLabels = () => {
                     // Remove old labels
-                    measurementLabelsRef.current.forEach(label => {
-                        scene.remove(label);
-                    });
+                    if (labelRendererRef.current && labelRendererRef.current.container) {
+                        labelRendererRef.current.container.innerHTML = '';
+                    }
                     measurementLabelsRef.current = [];
 
                     // Only show measurements when rotation is stopped and showMeasurements is true
-                    if (!isRotationActiveRef.current && showMeasurementsRef.current) {
+                    if (!isRotationActiveRef.current && showMeasurementsRef.current && labelRendererRef.current && labelRendererRef.current.container) {
                         const total = a + b;
                         const halfTotal = total / 2;
                         const offset = 0.3; // Offset from edges
 
                         // Helper function to create a label
-                        const createLabel = (text, position) => {
+                        const createLabel = (text, position3D) => {
                             const labelDiv = document.createElement('div');
                             labelDiv.className = 'measurement-label';
                             labelDiv.textContent = text;
+                            labelDiv.style.position = 'absolute';
                             labelDiv.style.color = '#333';
                             labelDiv.style.fontSize = '14px';
                             labelDiv.style.fontWeight = 'bold';
@@ -504,11 +510,15 @@
                             labelDiv.style.pointerEvents = 'none';
                             labelDiv.style.userSelect = 'none';
                             labelDiv.style.border = '1px solid #333';
+                            labelDiv.style.whiteSpace = 'nowrap';
                             
-                            const label = new THREE.CSS2DObject(labelDiv);
-                            label.position.set(...position);
-                            scene.add(label);
-                            measurementLabelsRef.current.push(label);
+                            labelRendererRef.current.container.appendChild(labelDiv);
+                            
+                            // Store 3D position for updating
+                            measurementLabelsRef.current.push({
+                                element: labelDiv,
+                                position3D: new THREE.Vector3(...position3D)
+                            });
                         };
 
                         // Width measurements (X axis) - on the front face
@@ -529,6 +539,39 @@
                         // Label for 'b' on the back
                         createLabel(b.toFixed(2), [halfTotal, halfTotal + offset, -halfTotal + b/2]);
                     }
+                };
+                
+                // Function to update label positions based on camera
+                const updateLabelPositions = () => {
+                    if (!labelRendererRef.current || !labelRendererRef.current.container) return;
+                    if (measurementLabelsRef.current.length === 0) return;
+                    
+                    const currentCamera = camera; // Use the main camera
+                    const width = mountRef.current.clientWidth;
+                    const height = mountRef.current.clientHeight;
+                    const legendVisible = isLegendVisibleRef.current;
+                    const mainWidth = legendVisible ? width * 0.75 : width;
+                    
+                    measurementLabelsRef.current.forEach(label => {
+                        if (!label.element || !label.position3D) return;
+                        
+                        const vector = label.position3D.clone();
+                        vector.project(currentCamera);
+                        
+                        // Check if label is in front of camera
+                        if (vector.z > 1) {
+                            label.element.style.display = 'none';
+                            return;
+                        }
+                        
+                        label.element.style.display = 'block';
+                        const x = (vector.x * 0.5 + 0.5) * mainWidth;
+                        const y = (vector.y * -0.5 + 0.5) * height;
+                        
+                        label.element.style.left = x + 'px';
+                        label.element.style.top = y + 'px';
+                        label.element.style.transform = 'translate(-50%, -50%)';
+                    });
                 };
 
                 // Update function
@@ -557,8 +600,9 @@
                     updateMeasurementLabels();
                 };
                 
-                // Store updateMeasurementLabels in ref so it can be called from useEffect
+                // Store updateMeasurementLabels and updateLabelPositions in refs so they can be called from useEffect
                 updateMeasurementLabelsRef.current = updateMeasurementLabels;
+                updateLabelPositionsRef.current = updateLabelPositions;
 
                 updatePieces();
 
@@ -594,10 +638,9 @@
                     controls.update();
                     renderer.render(scene, camera);
                     
-                    // Render measurement labels
-                    if (labelRendererRef.current) {
-                        labelRendererRef.current.setSize(width, height);
-                        labelRendererRef.current.render(scene, camera);
+                    // Update measurement label positions
+                    if (updateLabelPositionsRef.current) {
+                        updateLabelPositionsRef.current();
                     }
 
                     // Render legend viewport only if visible
@@ -680,9 +723,6 @@
                     const width = mountRef.current.clientWidth;
                     const height = mountRef.current.clientHeight;
                     renderer.setSize(width, height);
-                    if (labelRendererRef.current) {
-                        labelRendererRef.current.setSize(width, height);
-                    }
                     
                     const mainWidth = width * viewportMainWidth;
                     camera.aspect = mainWidth / height;
@@ -714,11 +754,13 @@
                         line.material.dispose();
                     });
                     measurementLabelsRef.current.forEach(label => {
-                        scene.remove(label);
+                        if (label.element && label.element.parentNode) {
+                            label.element.parentNode.removeChild(label.element);
+                        }
                     });
                     measurementLabelsRef.current = [];
-                    if (labelRendererRef.current && labelRendererRef.current.domElement.parentNode) {
-                        mountRef.current.removeChild(labelRendererRef.current.domElement);
+                    if (labelRendererRef.current && labelRendererRef.current.container && labelRendererRef.current.container.parentNode) {
+                        mountRef.current.removeChild(labelRendererRef.current.container);
                     }
                     renderer.dispose();
                     if (mountRef.current && renderer.domElement.parentNode) {
