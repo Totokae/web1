@@ -176,47 +176,27 @@
                                 {/* Text for C₁·x (left side) */}
                                 <text
                                     x={offsetX + scaledX / 2}
-                                    y={offsetY - 15}
+                                    y={offsetY - 10}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
                                     fill="#333"
                                     className="select-none"
                                 >
-                                    C₁·x = {X.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledX / 2}
-                                    y={offsetY - 5}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                >
-                                    (x = {x.toFixed(2)})
+                                    {X.toFixed(2)}
                                 </text>
 
                                 {/* Text for C₂·y (right side) */}
                                 <text
                                     x={offsetX + scaledX + scaledY / 2}
-                                    y={offsetY - 15}
+                                    y={offsetY - 10}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
                                     fill="#333"
                                     className="select-none"
                                 >
-                                    C₂·y = {Y.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledX + scaledY / 2}
-                                    y={offsetY - 5}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                >
-                                    (y = {y.toFixed(2)})
+                                    {Y.toFixed(2)}
                                 </text>
 
                                 {/* Vertical measurements - Left only */}
@@ -231,18 +211,7 @@
                                     className="select-none"
                                     transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2})`}
                                 >
-                                    C₁·x = {X.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX - 50}
-                                    y={offsetY + scaledX / 2 + 15}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2 + 15})`}
-                                >
-                                    (x = {x.toFixed(2)})
+                                    {X.toFixed(2)}
                                 </text>
 
                                 {/* Text for C₂·y (bottom) */}
@@ -256,18 +225,7 @@
                                     className="select-none"
                                     transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2})`}
                                 >
-                                    C₂·y = {Y.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX - 50}
-                                    y={offsetY + scaledX + scaledY / 2 + 15}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2 + 15})`}
-                                >
-                                    (y = {y.toFixed(2)})
+                                    {Y.toFixed(2)}
                                 </text>
                             </>
                         )}
