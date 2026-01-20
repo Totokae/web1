@@ -172,43 +172,11 @@
                         {/* Measurement Lines and Labels - Only show if showMeasurements is true */}
                         {showMeasurements && (
                             <>
-                                {/* Arrow marker definition */}
-                                <defs>
-                                    <marker
-                                        id="arrowhead"
-                                        markerWidth="10"
-                                        markerHeight="10"
-                                        refX="9"
-                                        refY="3"
-                                        orient="auto"
-                                    >
-                                        <polygon points="0 0, 10 3, 0 6" fill="#333" />
-                                    </marker>
-                                </defs>
-
-                                {/* Horizontal measurements - Top */}
-                                {/* Line for C₁·x (left side) */}
-                                <line
-                                    x1={offsetX - 20}
-                                    y1={offsetY}
-                                    x2={offsetX - 20}
-                                    y2={offsetY - 30}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX - 25}
-                                    y1={offsetY - 15}
-                                    x2={offsetX + scaledX - 25}
-                                    y2={offsetY - 15}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
+                                {/* Horizontal measurements - Top only */}
+                                {/* Text for C₁·x (left side) */}
                                 <text
-                                    x={offsetX + scaledX / 2 - 25}
-                                    y={offsetY - 25}
+                                    x={offsetX + scaledX / 2}
+                                    y={offsetY - 15}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
@@ -218,8 +186,8 @@
                                     C₁·x = {X.toFixed(2)}
                                 </text>
                                 <text
-                                    x={offsetX + scaledX / 2 - 25}
-                                    y={offsetY - 10}
+                                    x={offsetX + scaledX / 2}
+                                    y={offsetY - 5}
                                     textAnchor="middle"
                                     fontSize="11"
                                     fill="#666"
@@ -228,28 +196,10 @@
                                     (x = {x.toFixed(2)})
                                 </text>
 
-                                {/* Line for C₂·y (right side) */}
-                                <line
-                                    x1={offsetX + scaledX + scaledY + 20}
-                                    y1={offsetY}
-                                    x2={offsetX + scaledX + scaledY + 20}
-                                    y2={offsetY - 30}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX + scaledX + 25}
-                                    y1={offsetY - 15}
-                                    x2={offsetX + scaledX + scaledY + 25}
-                                    y2={offsetY - 15}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
+                                {/* Text for C₂·y (right side) */}
                                 <text
-                                    x={offsetX + scaledX + scaledY / 2 + 25}
-                                    y={offsetY - 25}
+                                    x={offsetX + scaledX + scaledY / 2}
+                                    y={offsetY - 15}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
@@ -259,8 +209,8 @@
                                     C₂·y = {Y.toFixed(2)}
                                 </text>
                                 <text
-                                    x={offsetX + scaledX + scaledY / 2 + 25}
-                                    y={offsetY - 10}
+                                    x={offsetX + scaledX + scaledY / 2}
+                                    y={offsetY - 5}
                                     textAnchor="middle"
                                     fontSize="11"
                                     fill="#666"
@@ -269,259 +219,53 @@
                                     (y = {y.toFixed(2)})
                                 </text>
 
-                                {/* Horizontal measurements - Bottom */}
-                                {/* Line for C₁·x (left side) */}
-                                <line
-                                    x1={offsetX - 20}
-                                    y1={offsetY + scaledTotal}
-                                    x2={offsetX - 20}
-                                    y2={offsetY + scaledTotal + 30}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX - 25}
-                                    y1={offsetY + scaledTotal + 15}
-                                    x2={offsetX + scaledX - 25}
-                                    y2={offsetY + scaledTotal + 15}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
-                                <text
-                                    x={offsetX + scaledX / 2 - 25}
-                                    y={offsetY + scaledTotal + 30}
-                                    textAnchor="middle"
-                                    fontSize="12"
-                                    fontWeight="bold"
-                                    fill="#333"
-                                    className="select-none"
-                                >
-                                    C₁·x = {X.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledX / 2 - 25}
-                                    y={offsetY + scaledTotal + 45}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                >
-                                    (x = {x.toFixed(2)})
-                                </text>
-
-                                {/* Line for C₂·y (right side) */}
-                                <line
-                                    x1={offsetX + scaledX + scaledY + 20}
-                                    y1={offsetY + scaledTotal}
-                                    x2={offsetX + scaledX + scaledY + 20}
-                                    y2={offsetY + scaledTotal + 30}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX + scaledX + 25}
-                                    y1={offsetY + scaledTotal + 15}
-                                    x2={offsetX + scaledX + scaledY + 25}
-                                    y2={offsetY + scaledTotal + 15}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
-                                <text
-                                    x={offsetX + scaledX + scaledY / 2 + 25}
-                                    y={offsetY + scaledTotal + 30}
-                                    textAnchor="middle"
-                                    fontSize="12"
-                                    fontWeight="bold"
-                                    fill="#333"
-                                    className="select-none"
-                                >
-                                    C₂·y = {Y.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledX + scaledY / 2 + 25}
-                                    y={offsetY + scaledTotal + 45}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                >
-                                    (y = {y.toFixed(2)})
-                                </text>
-
-                                {/* Vertical measurements - Left */}
-                                {/* Line for C₁·x (top) */}
-                                <line
-                                    x1={offsetX}
-                                    y1={offsetY - 20}
-                                    x2={offsetX - 30}
-                                    y2={offsetY - 20}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX - 15}
-                                    y1={offsetY - 25}
-                                    x2={offsetX - 15}
-                                    y2={offsetY + scaledX - 25}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
+                                {/* Vertical measurements - Left only */}
+                                {/* Text for C₁·x (top) */}
                                 <text
                                     x={offsetX - 50}
-                                    y={offsetY + scaledX / 2 - 30}
+                                    y={offsetY + scaledX / 2}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
                                     fill="#333"
                                     className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2 - 30})`}
+                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2})`}
                                 >
                                     C₁·x = {X.toFixed(2)}
                                 </text>
                                 <text
                                     x={offsetX - 50}
-                                    y={offsetY + scaledX / 2 - 15}
+                                    y={offsetY + scaledX / 2 + 15}
                                     textAnchor="middle"
                                     fontSize="11"
                                     fill="#666"
                                     className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2 - 15})`}
+                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX / 2 + 15})`}
                                 >
                                     (x = {x.toFixed(2)})
                                 </text>
 
-                                {/* Line for C₂·y (bottom) */}
-                                <line
-                                    x1={offsetX}
-                                    y1={offsetY + scaledTotal + 20}
-                                    x2={offsetX - 30}
-                                    y2={offsetY + scaledTotal + 20}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX - 15}
-                                    y1={offsetY + scaledX - 25}
-                                    x2={offsetX - 15}
-                                    y2={offsetY + scaledX + scaledY - 25}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
+                                {/* Text for C₂·y (bottom) */}
                                 <text
                                     x={offsetX - 50}
-                                    y={offsetY + scaledX + scaledY / 2 - 30}
+                                    y={offsetY + scaledX + scaledY / 2}
                                     textAnchor="middle"
                                     fontSize="12"
                                     fontWeight="bold"
                                     fill="#333"
                                     className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2 - 30})`}
+                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2})`}
                                 >
                                     C₂·y = {Y.toFixed(2)}
                                 </text>
                                 <text
                                     x={offsetX - 50}
-                                    y={offsetY + scaledX + scaledY / 2 - 15}
+                                    y={offsetY + scaledX + scaledY / 2 + 15}
                                     textAnchor="middle"
                                     fontSize="11"
                                     fill="#666"
                                     className="select-none"
-                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2 - 15})`}
-                                >
-                                    (y = {y.toFixed(2)})
-                                </text>
-
-                                {/* Vertical measurements - Right */}
-                                {/* Line for C₁·x (top) */}
-                                <line
-                                    x1={offsetX + scaledTotal}
-                                    y1={offsetY - 20}
-                                    x2={offsetX + scaledTotal + 30}
-                                    y2={offsetY - 20}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX + scaledTotal + 15}
-                                    y1={offsetY - 25}
-                                    x2={offsetX + scaledTotal + 15}
-                                    y2={offsetY + scaledX - 25}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
-                                <text
-                                    x={offsetX + scaledTotal + 50}
-                                    y={offsetY + scaledX / 2 - 30}
-                                    textAnchor="middle"
-                                    fontSize="12"
-                                    fontWeight="bold"
-                                    fill="#333"
-                                    className="select-none"
-                                    transform={`rotate(90 ${offsetX + scaledTotal + 50} ${offsetY + scaledX / 2 - 30})`}
-                                >
-                                    C₁·x = {X.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledTotal + 50}
-                                    y={offsetY + scaledX / 2 - 15}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                    transform={`rotate(90 ${offsetX + scaledTotal + 50} ${offsetY + scaledX / 2 - 15})`}
-                                >
-                                    (x = {x.toFixed(2)})
-                                </text>
-
-                                {/* Line for C₂·y (bottom) */}
-                                <line
-                                    x1={offsetX + scaledTotal}
-                                    y1={offsetY + scaledTotal + 20}
-                                    x2={offsetX + scaledTotal + 30}
-                                    y2={offsetY + scaledTotal + 20}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                    markerEnd="url(#arrowhead)"
-                                    markerStart="url(#arrowhead)"
-                                />
-                                <line
-                                    x1={offsetX + scaledTotal + 15}
-                                    y1={offsetY + scaledX - 25}
-                                    x2={offsetX + scaledTotal + 15}
-                                    y2={offsetY + scaledX + scaledY - 25}
-                                    stroke="#333"
-                                    strokeWidth="2"
-                                />
-                                <text
-                                    x={offsetX + scaledTotal + 50}
-                                    y={offsetY + scaledX + scaledY / 2 - 30}
-                                    textAnchor="middle"
-                                    fontSize="12"
-                                    fontWeight="bold"
-                                    fill="#333"
-                                    className="select-none"
-                                    transform={`rotate(90 ${offsetX + scaledTotal + 50} ${offsetY + scaledX + scaledY / 2 - 30})`}
-                                >
-                                    C₂·y = {Y.toFixed(2)}
-                                </text>
-                                <text
-                                    x={offsetX + scaledTotal + 50}
-                                    y={offsetY + scaledX + scaledY / 2 - 15}
-                                    textAnchor="middle"
-                                    fontSize="11"
-                                    fill="#666"
-                                    className="select-none"
-                                    transform={`rotate(90 ${offsetX + scaledTotal + 50} ${offsetY + scaledX + scaledY / 2 - 15})`}
+                                    transform={`rotate(-90 ${offsetX - 50} ${offsetY + scaledX + scaledY / 2 + 15})`}
                                 >
                                     (y = {y.toFixed(2)})
                                 </text>
