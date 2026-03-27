@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MAXILIMON - Juego de Sumas</title>
+  <title>MAXILIMON - Mundo de Sumas</title>
   <style>
     :root {
       --bg1: #0b1023;
@@ -31,43 +31,126 @@
     }
 
     .contenedor {
-      width: min(560px, 100%);
+      width: min(640px, 100%);
       background: var(--card);
-      border: 3px solid #ffffff22;
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: 0 14px 30px #00000066;
+      border: 3px solid #ffffff33;
+      border-radius: 22px;
+      padding: 24px 24px 20px;
+      box-shadow: 0 18px 40px #00000080;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fondos-bloques {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.15;
+      background-image:
+        linear-gradient(#00ff8877 2px, transparent 2px),
+        linear-gradient(90deg, #00ff8877 2px, transparent 2px);
+      background-size: 40px 40px;
+      mix-blend-mode: screen;
+    }
+
+    .borde-hero {
+      position: absolute;
+      inset: 0;
+      border-radius: 22px;
+      border: 3px dashed #ff475744;
+      pointer-events: none;
     }
 
     h1 {
       margin-top: 0;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       color: #fff;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      font-size: 1.8rem;
+      text-shadow: 0 0 10px #ff4757aa;
     }
 
     .subtitulo {
       margin-top: 0;
-      margin-bottom: 18px;
-      color: #dbe5ff;
+      margin-bottom: 6px;
+      color: #fffa;
+      font-size: 1rem;
     }
 
     .gustos {
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       margin-bottom: 18px;
       color: #c7d2ff;
     }
 
-    .operacion {
-      font-size: 2rem;
+    .niveles-barra {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nivel-chip {
+      min-width: 56px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 2px solid #ffffff33;
+      font-size: 0.8rem;
+      color: #dfe6ff;
+      background: #00000033;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .nivel-chip.activo {
+      background: linear-gradient(135deg, #ff4757, #ffa502);
+      border-color: #ffffffcc;
+      color: #fff;
+      box-shadow: 0 0 12px #ff4757aa;
+      transform: translateY(-1px);
+    }
+
+    .nivel-chip.completado {
+      background: linear-gradient(135deg, #2ed573, #1e90ff);
+      border-color: #ffffffcc;
+      color: #fff;
+    }
+
+    .nivel-chip span {
       font-weight: 700;
-      margin: 16px 0;
+    }
+
+    .boss-chip {
+      border-color: #ff00ffaa;
+      background: radial-gradient(circle at top, #ff00ff, #341f97);
+    }
+
+    .operacion {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 18px 0 10px;
       min-height: 44px;
       color: #ffffff;
-      background: #00000026;
+      background: linear-gradient(90deg, #ff475744, #1e90ff55);
       border-radius: 12px;
-      padding: 8px;
+      padding: 10px;
+    }
+
+    .texto-nivel {
+      font-size: 0.9rem;
+      color: #e0e8ff;
+      margin-top: 0;
+      margin-bottom: 4px;
+    }
+
+    .progreso {
+      font-size: 0.85rem;
+      color: #c7d2ff;
+      margin-bottom: 12px;
     }
 
     .fila {
@@ -89,20 +172,33 @@
       cursor: pointer;
       color: #fff;
       font-weight: 700;
+      box-shadow: 0 4px 0 #00000066;
+      transform: translateY(0);
+      transition: transform 0.08s, box-shadow 0.08s, filter 0.15s;
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #00000066;
+      filter: brightness(0.9);
     }
 
     #btnGenerar {
-      background: var(--accent3);
+      background: linear-gradient(135deg, #1e90ff, #00d2ff);
     }
 
     #btnRevisar {
-      background: var(--accent);
+      background: linear-gradient(135deg, #ff4757, #ff6b81);
     }
 
     input {
       width: 130px;
       text-align: center;
       font-weight: 700;
+      border-radius: 12px;
+      border: 2px solid #ffffff55;
+      background: #00000055;
+      color: #fff;
     }
 
     .mensaje {
@@ -110,7 +206,7 @@
       margin-top: 14px;
       border-radius: 12px;
       padding: 14px;
-      background: #00000026;
+      background: #00000055;
       font-size: 1.15rem;
       font-weight: 700;
     }
@@ -122,58 +218,169 @@
     .error {
       color: #ffd166;
     }
+
+    .boss-mensaje {
+      font-size: 0.9rem;
+      color: #ffccff;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <main class="contenedor">
-    <h1>MAXILIMON</h1>
-    <p class="subtitulo">Juego de sumas para MAXI (1° básico)</p>
-    <p class="gustos">Tema favorito: Spiderman, Roblox, Minecraft y Geometry Dash</p>
+    <div class="fondos-bloques"></div>
+    <div class="borde-hero"></div>
+
+    <h1>MAXILIMÓN</h1>
+    <p class="subtitulo">Mundo de sumas para MAXI</p>
+    <p class="gustos">Superhéroe de las matemáticas: Spiderman · Roblox · Minecraft · Geometry Dash</p>
+
+    <div class="niveles-barra">
+      <div class="nivel-chip activo" id="chip-nivel-1"><span>1</span></div>
+      <div class="nivel-chip" id="chip-nivel-2"><span>2</span></div>
+      <div class="nivel-chip" id="chip-nivel-3"><span>3</span></div>
+      <div class="nivel-chip" id="chip-nivel-4"><span>4</span></div>
+      <div class="nivel-chip" id="chip-nivel-5"><span>5</span></div>
+      <div class="nivel-chip boss-chip" id="chip-nivel-6"><span>BOSS</span></div>
+    </div>
+
+    <p id="textoNivel" class="texto-nivel"></p>
+    <p id="textoProgreso" class="progreso"></p>
 
     <div id="operacion" class="operacion">Presiona "Nueva suma"</div>
 
     <div class="fila">
       <button id="btnGenerar" type="button">Nueva suma</button>
-      <input id="respuesta" type="number" placeholder="Resultado" min="0" max="20">
+      <input id="respuesta" type="number" placeholder="Resultado" min="0" max="40">
       <button id="btnRevisar" type="button">Revisar</button>
     </div>
 
     <div id="mensaje" class="mensaje"></div>
+    <div id="mensajeBoss" class="boss-mensaje"></div>
   </main>
 
   <script>
     let numero1 = null;
     let numero2 = null;
+    let nivelActual = 1;       // 1 a 6 (6 = BOSS)
+    let aciertosNivel = 0;
+    const metaPorNivel = 5;    // 5 aciertos para pasar cada nivel
 
     const operacion = document.getElementById("operacion");
     const respuesta = document.getElementById("respuesta");
     const mensaje = document.getElementById("mensaje");
+    const mensajeBoss = document.getElementById("mensajeBoss");
     const btnGenerar = document.getElementById("btnGenerar");
     const btnRevisar = document.getElementById("btnRevisar");
+    const textoNivel = document.getElementById("textoNivel");
+    const textoProgreso = document.getElementById("textoProgreso");
+
+    const chips = [];
+    for (let i = 1; i <= 6; i++) {
+      chips[i] = document.getElementById(i === 6 ? "chip-nivel-6" : "chip-nivel-" + i);
+    }
+
+    function actualizarTextoNivel() {
+      if (nivelActual === 6) {
+        textoNivel.textContent = "Nivel BOSS: ¡PELEA FINAL DE SUMAS SUPER PODEROSAS!";
+        mensajeBoss.textContent = "Derrota al BOSS acertando " + metaPorNivel + " sumas para convertirte en el HÉROE DE LAS MATEMÁTICAS.";
+      } else {
+        const descripciones = {
+          1: "Nivel 1: Spiderman se balancea entre sumas fáciles (0 a 5).",
+          2: "Nivel 2: Roblox: más bloques de números (0 a 10).",
+          3: "Nivel 3: Minecraft: construye con sumas un poco más grandes (0 a 12).",
+          4: "Nivel 4: Geometry Dash: sumas rápidas (0 a 15).",
+          5: "Nivel 5: Súper héroe: sumas desafiantes (0 a 20)."
+        };
+        textoNivel.textContent = descripciones[nivelActual] || "";
+        mensajeBoss.textContent = "";
+      }
+      textoProgreso.textContent = "Aciertos en este nivel: " + aciertosNivel + " de " + metaPorNivel;
+    }
+
+    function actualizarChips() {
+      for (let i = 1; i <= 6; i++) {
+        chips[i].classList.remove("activo", "completado");
+        if (i < nivelActual) {
+          chips[i].classList.add("completado");
+        } else if (i === nivelActual) {
+          chips[i].classList.add("activo");
+        }
+      }
+    }
+
+    function rangoMaximoSegunNivel() {
+      switch (nivelActual) {
+        case 1: return 5;
+        case 2: return 10;
+        case 3: return 12;
+        case 4: return 15;
+        case 5: return 20;
+        case 6: return 20; // boss: usaremos dos sumas encadenadas pero con estos límites
+        default: return 10;
+      }
+    }
 
     function generarSuma() {
-      numero1 = Math.floor(Math.random() * 11);
-      numero2 = Math.floor(Math.random() * 11);
-      operacion.textContent = numero1 + " + " + numero2 + " = ?";
+      const max = rangoMaximoSegunNivel();
+      numero1 = Math.floor(Math.random() * (max + 1));
+      numero2 = Math.floor(Math.random() * (max + 1));
+
+      if (nivelActual === 6) {
+        // Boss: operación doble (dos sumas seguidas)
+        const extra1 = Math.floor(Math.random() * 6);  // 0-5
+        const extra2 = Math.floor(Math.random() * 6);
+        // Guardamos la suma total en numero1 + numero2 y mostramos formato especial
+        operacion.textContent = "(" + numero1 + " + " + numero2 + ") + (" + extra1 + " + " + extra2 + ") = ?";
+        // Usamos numero1 como total final; guardamos suma completa
+        numero1 = numero1 + numero2 + extra1 + extra2;
+        numero2 = 0; // ya no se usa
+      } else {
+        operacion.textContent = numero1 + " + " + numero2 + " = ?";
+      }
+
       respuesta.value = "";
       respuesta.focus();
       mensaje.textContent = "";
       mensaje.className = "mensaje";
     }
 
+    function pasarDeNivel() {
+      aciertosNivel = 0;
+      if (nivelActual < 6) {
+        nivelActual++;
+        mensaje.textContent = nivelActual === 6
+          ? "¡ENTRASTE A LA PELEA FINAL! ¡BOSS DE SUMAS!"
+          : "¡SUBISTE DE NIVEL! Ahora estás en el nivel " + nivelActual + ".";
+        mensaje.className = "mensaje ok";
+        actualizarChips();
+        actualizarTextoNivel();
+      } else {
+        mensaje.textContent = "¡VENCISTE AL BOSS! ¡ERES EL CAMPEÓN, MAXI!";
+        mensaje.className = "mensaje ok";
+        mensajeBoss.textContent = "Puedes seguir jugando para practicar aún más tus super-sumas.";
+      }
+    }
+
     function revisarRespuesta() {
-      if (numero1 === null || numero2 === null) {
+      if (numero1 === null) {
         mensaje.textContent = "Primero presiona \"Nueva suma\".";
         mensaje.className = "mensaje error";
         return;
       }
 
       const valorIngresado = Number(respuesta.value);
-      const resultadoCorrecto = numero1 + numero2;
+      const resultadoCorrecto = nivelActual === 6 ? numero1 : (numero1 + numero2);
 
       if (valorIngresado === resultadoCorrecto) {
+        aciertosNivel++;
         mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
         mensaje.className = "mensaje ok";
+        if (aciertosNivel >= metaPorNivel) {
+          pasarDeNivel();
+        } else {
+          textoProgreso.textContent = "Aciertos en este nivel: " + aciertosNivel + " de " + metaPorNivel;
+        }
       } else {
         mensaje.textContent = "VUELVE A INTENTARLO, TÚ PUEDES!";
         mensaje.className = "mensaje error";
@@ -182,6 +389,10 @@
 
     btnGenerar.addEventListener("click", generarSuma);
     btnRevisar.addEventListener("click", revisarRespuesta);
+
+    // Estado inicial de textos y niveles
+    actualizarChips();
+    actualizarTextoNivel();
   </script>
 </body>
 </html>
