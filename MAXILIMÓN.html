@@ -346,6 +346,46 @@
       padding: 20px;
     }
 
+    .reinicio-wrap {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #000000b3;
+      z-index: 60;
+    }
+
+    .btn-reinicio {
+      min-width: min(520px, 85vw);
+      min-height: 110px;
+      border-radius: 20px;
+      border: 4px solid #ffffffcc;
+      background: linear-gradient(135deg, #2ed573, #1e90ff);
+      color: #fff;
+      font-size: clamp(2rem, 6vw, 3.3rem);
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #2ed573aa;
+      animation: pulso-reinicio 1.1s ease-in-out infinite;
+    }
+
+    @keyframes pulso-reinicio {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 14px #2ed57388;
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 28px #2ed573ee;
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 14px #2ed57388;
+      }
+    }
+
     .imagen-logro {
       position: fixed;
       inset: 0;
@@ -459,6 +499,9 @@
     <img id="imagenLogroSrc" alt="Logro">
   </div>
   <div id="anuncioNivel" class="anuncio-nivel"></div>
+  <div id="reinicioWrap" class="reinicio-wrap">
+    <button id="btnReiniciar" class="btn-reinicio" type="button">JUGAR DE NUEVO</button>
+  </div>
 
   <script>
     let numero1 = null;
@@ -469,6 +512,7 @@
     let entradaActual = "";
     let bloqueado = false;
     let timerSiguiente = null;
+    let juegoTerminado = false;
 
     const operacion = document.getElementById("operacion");
     const pantallaRespuesta = document.getElementById("pantallaRespuesta");
@@ -486,6 +530,8 @@
     const imagenLogro = document.getElementById("imagenLogro");
     const imagenLogroSrc = document.getElementById("imagenLogroSrc");
     const anuncioNivel = document.getElementById("anuncioNivel");
+    const reinicioWrap = document.getElementById("reinicioWrap");
+    const btnReiniciar = document.getElementById("btnReiniciar");
     const teclasNumericas = document.querySelectorAll("[data-num]");
     let timerImagen = null;
 
@@ -536,6 +582,39 @@
 
     function ocultarAnuncio() {
       anuncioNivel.style.display = "none";
+    }
+
+    function mostrarAnuncioFinal() {
+      mostrarAnuncio("FELICIDADES MAXI,\nte sacaste un 7,0");
+      setTimeout(() => {
+        ocultarAnuncio();
+        reinicioWrap.style.display = "flex";
+      }, 10000);
+    }
+
+    function reiniciarJuego() {
+      if (timerSiguiente) {
+        clearTimeout(timerSiguiente);
+      }
+      if (timerImagen) {
+        clearTimeout(timerImagen);
+      }
+      ocultarAnuncio();
+      imagenLogro.style.display = "none";
+      reinicioWrap.style.display = "none";
+
+      numero1 = null;
+      numero2 = null;
+      nivelActual = 1;
+      aciertosNivel = 0;
+      entradaActual = "";
+      bloqueado = false;
+      juegoTerminado = false;
+
+      actualizarChips();
+      actualizarTextoNivel();
+      actualizarPantallaRespuesta();
+      generarSuma();
     }
 
     function mostrarImagenLogro() {
@@ -613,16 +692,18 @@
         actualizarChips();
         actualizarTextoNivel();
         mostrarAnuncio(textoAnuncio);
-        return true;
+        return "subio";
       } else {
-        mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
+        juegoTerminado = true;
+        mensaje.textContent = "FELICIDADES MAXI";
         mensaje.className = "mensaje ok";
+        mostrarAnuncioFinal();
+        return "final";
       }
-      return false;
     }
 
     function comprobarRespuesta() {
-      if (bloqueado) {
+      if (bloqueado || juegoTerminado) {
         return;
       }
 
@@ -647,14 +728,14 @@
         actualizarBarras();
         mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
         mensaje.className = "mensaje ok";
-        let subioNivel = false;
+        let estadoNivel = "normal";
         if (aciertosNivel >= metaPorNivel) {
-          subioNivel = pasarDeNivel();
+          estadoNivel = pasarDeNivel();
         } else {
           textoProgreso.textContent = aciertosNivel + " / " + metaPorNivel;
         }
 
-        if (!subioNivel) {
+        if (estadoNivel === "normal") {
           mostrarImagenLogro();
         }
 
@@ -662,10 +743,16 @@
           clearTimeout(timerSiguiente);
         }
 
-        timerSiguiente = setTimeout(() => {
-          ocultarAnuncio();
-          generarSuma();
-        }, subioNivel ? 4000 : 2000);
+        if (estadoNivel === "subio") {
+          timerSiguiente = setTimeout(() => {
+            ocultarAnuncio();
+            generarSuma();
+          }, 4000);
+        } else if (estadoNivel === "normal") {
+          timerSiguiente = setTimeout(() => {
+            generarSuma();
+          }, 2000);
+        }
       } else {
         mensaje.textContent = "VUELVE A INTENTARLO, TÚ PUEDES!";
         mensaje.className = "mensaje error";
@@ -680,7 +767,7 @@
 
     teclasNumericas.forEach((tecla) => {
       tecla.addEventListener("click", () => {
-        if (bloqueado) {
+        if (bloqueado || juegoTerminado) {
           return;
         }
         if (entradaActual.length >= 2) {
@@ -692,7 +779,7 @@
     });
 
     btnBorrar.addEventListener("click", () => {
-      if (bloqueado) {
+      if (bloqueado || juegoTerminado) {
         return;
       }
       entradaActual = entradaActual.slice(0, -1);
@@ -700,7 +787,7 @@
     });
 
     btnTodoBorrar.addEventListener("click", () => {
-      if (bloqueado) {
+      if (bloqueado || juegoTerminado) {
         return;
       }
       entradaActual = "";
@@ -708,6 +795,7 @@
     });
 
     btnComprobar.addEventListener("click", comprobarRespuesta);
+    btnReiniciar.addEventListener("click", reiniciarJuego);
 
     // Estado inicial de textos y niveles
     actualizarChips();
