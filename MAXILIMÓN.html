@@ -98,16 +98,33 @@
 
     .niveles-barra {
       display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 10px;
+      width: 100%;
       max-width: 220px;
+      position: relative;
+      padding: 6px 0;
+    }
+
+    .niveles-barra::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #74b9ff, #2ed573, #a55eea);
+      opacity: 0.8;
     }
 
     .nivel-chip {
-      min-width: 72px;
-      padding: 10px 12px;
+      width: 190px;
+      min-height: 56px;
+      padding: 10px 14px;
       border-radius: 999px;
       border: 3px solid #ffffff55;
       font-size: 1.1rem;
@@ -117,6 +134,8 @@
       align-items: center;
       justify-content: center;
       gap: 4px;
+      position: relative;
+      z-index: 1;
     }
 
     .nivel-chip.activo {
@@ -135,6 +154,7 @@
 
     .nivel-chip span {
       font-weight: 700;
+      font-size: 1.25rem;
     }
 
     .boss-chip {
@@ -278,6 +298,10 @@
 
       .niveles-barra {
         max-width: none;
+      }
+
+      .nivel-chip {
+        width: min(220px, 80vw);
       }
     }
   </style>
