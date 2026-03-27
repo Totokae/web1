@@ -83,17 +83,17 @@
     }
 
     .panel-niveles {
-      width: min(360px, 30vw);
-      min-width: 250px;
+      width: min(520px, 42vw);
+      min-width: 340px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
       gap: 10px;
-      padding: 20px 12px;
+      padding: 28px 18px;
       background: #00000033;
-      border-left: 3px solid #ffffff33;
+      border-left: 4px solid #ffffff44;
     }
 
     .niveles-barra {
@@ -103,9 +103,9 @@
       gap: 18px;
       margin-bottom: 10px;
       width: 100%;
-      max-width: 220px;
+      max-width: 320px;
       position: relative;
-      padding: 6px 0;
+      padding: 10px 0;
     }
 
     .niveles-barra::before {
@@ -123,11 +123,11 @@
 
     .nivel-chip {
       width: 190px;
-      min-height: 56px;
-      padding: 10px 14px;
+      min-height: 72px;
+      padding: 12px 16px;
       border-radius: 999px;
       border: 3px solid #ffffff55;
-      font-size: 1.1rem;
+      font-size: 1.35rem;
       color: #dfe6ff;
       background: #00000055;
       display: flex;
@@ -154,7 +154,7 @@
 
     .nivel-chip span {
       font-weight: 700;
-      font-size: 1.25rem;
+      font-size: 1.5rem;
     }
 
     .boss-chip {
@@ -186,6 +186,63 @@
       color: #c7d2ff;
       margin-bottom: 10px;
       font-weight: 700;
+    }
+
+    .progreso-wrap {
+      width: min(320px, 90%);
+      display: none;
+      margin-top: 4px;
+    }
+
+    .barra-titulo {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .barra-fondo {
+      width: 100%;
+      height: 24px;
+      border-radius: 999px;
+      background: #00000066;
+      border: 3px solid #ffffff55;
+      overflow: hidden;
+    }
+
+    .barra-relleno {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #1e90ff, #2ed573);
+      transition: width 0.25s ease;
+    }
+
+    .boss-vida-wrap {
+      width: min(360px, 95%);
+      display: none;
+      margin-top: 8px;
+      padding: 10px;
+      border: 3px solid #ff6bd6;
+      border-radius: 16px;
+      background: radial-gradient(circle at top, #3a1c71aa, #00000066);
+      box-shadow: 0 0 16px #ff00ffaa;
+    }
+
+    .boss-vida-wrap .barra-titulo {
+      font-size: 1.45rem;
+      letter-spacing: 1px;
+      color: #ffd1ff;
+    }
+
+    .boss-vida-wrap .barra-fondo {
+      height: 34px;
+      border: 3px solid #ff9ff3;
+      background: #12001f;
+    }
+
+    .boss-vida-wrap .barra-relleno {
+      background: linear-gradient(90deg, #2ed573, #feca57, #ff4757);
     }
 
     .fila {
@@ -273,6 +330,22 @@
       justify-content: center;
     }
 
+    .anuncio-nivel {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #000000b3;
+      z-index: 50;
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 18px #00d2ff, 0 0 28px #ff4757;
+      text-align: center;
+      padding: 20px;
+    }
+
     .ok {
       color: var(--accent2);
     }
@@ -301,7 +374,7 @@
       }
 
       .nivel-chip {
-        width: min(220px, 80vw);
+        width: min(260px, 85vw);
       }
     }
   </style>
@@ -349,9 +422,22 @@
 
       <p id="textoNivel" class="texto-nivel"></p>
       <p id="textoProgreso" class="progreso"></p>
+      <div id="progresoWrap" class="progreso-wrap">
+        <p class="barra-titulo">PROGRESO</p>
+        <div class="barra-fondo">
+          <div id="progresoRelleno" class="barra-relleno"></div>
+        </div>
+      </div>
+      <div id="bossVidaWrap" class="boss-vida-wrap">
+        <p class="barra-titulo">VIDA BOSS</p>
+        <div class="barra-fondo">
+          <div id="bossVidaRelleno" class="barra-relleno"></div>
+        </div>
+      </div>
       <div id="mensajeBoss" class="boss-mensaje"></div>
     </aside>
   </main>
+  <div id="anuncioNivel" class="anuncio-nivel"></div>
 
   <script>
     let numero1 = null;
@@ -372,6 +458,11 @@
     const btnTodoBorrar = document.getElementById("btnTodoBorrar");
     const textoNivel = document.getElementById("textoNivel");
     const textoProgreso = document.getElementById("textoProgreso");
+    const progresoWrap = document.getElementById("progresoWrap");
+    const progresoRelleno = document.getElementById("progresoRelleno");
+    const bossVidaWrap = document.getElementById("bossVidaWrap");
+    const bossVidaRelleno = document.getElementById("bossVidaRelleno");
+    const anuncioNivel = document.getElementById("anuncioNivel");
     const teclasNumericas = document.querySelectorAll("[data-num]");
 
     const chips = [];
@@ -383,6 +474,35 @@
       textoNivel.textContent = nivelActual === 6 ? "BOSS FINAL" : "NIVEL " + nivelActual;
       textoProgreso.textContent = aciertosNivel + " / " + metaPorNivel;
       mensajeBoss.textContent = "";
+      actualizarBarras();
+    }
+
+    function actualizarBarras() {
+      const restante = Math.max(metaPorNivel - aciertosNivel, 0);
+      const progreso = (aciertosNivel / metaPorNivel) * 100;
+      const vidaBoss = (restante / metaPorNivel) * 100;
+
+      if (nivelActual >= 1 && nivelActual <= 5) {
+        progresoWrap.style.display = "block";
+        bossVidaWrap.style.display = "none";
+        progresoRelleno.style.width = progreso + "%";
+      } else if (nivelActual === 6) {
+        progresoWrap.style.display = "none";
+        bossVidaWrap.style.display = "block";
+        bossVidaRelleno.style.width = vidaBoss + "%";
+      } else {
+        progresoWrap.style.display = "none";
+        bossVidaWrap.style.display = "none";
+      }
+    }
+
+    function mostrarAnuncio(texto) {
+      anuncioNivel.textContent = texto;
+      anuncioNivel.style.display = "flex";
+    }
+
+    function ocultarAnuncio() {
+      anuncioNivel.style.display = "none";
     }
 
     function actualizarPantallaRespuesta() {
@@ -439,14 +559,18 @@
       aciertosNivel = 0;
       if (nivelActual < 6) {
         nivelActual++;
-        mensaje.textContent = nivelActual === 6 ? "BOSS FINAL" : "NIVEL " + nivelActual;
+        const textoAnuncio = nivelActual === 6 ? "BOSS FIGHT" : "NIVEL " + nivelActual;
+        mensaje.textContent = textoAnuncio;
         mensaje.className = "mensaje ok";
         actualizarChips();
         actualizarTextoNivel();
+        mostrarAnuncio(textoAnuncio);
+        return true;
       } else {
         mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
         mensaje.className = "mensaje ok";
       }
+      return false;
     }
 
     function comprobarRespuesta() {
@@ -472,25 +596,34 @@
 
       if (valorIngresado === resultadoCorrecto) {
         aciertosNivel++;
+        actualizarBarras();
         mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
         mensaje.className = "mensaje ok";
+        let subioNivel = false;
         if (aciertosNivel >= metaPorNivel) {
-          pasarDeNivel();
+          subioNivel = pasarDeNivel();
         } else {
           textoProgreso.textContent = aciertosNivel + " / " + metaPorNivel;
         }
+
+        if (timerSiguiente) {
+          clearTimeout(timerSiguiente);
+        }
+
+        timerSiguiente = setTimeout(() => {
+          ocultarAnuncio();
+          generarSuma();
+        }, subioNivel ? 4000 : 2000);
       } else {
         mensaje.textContent = "VUELVE A INTENTARLO, TÚ PUEDES!";
         mensaje.className = "mensaje error";
+        if (timerSiguiente) {
+          clearTimeout(timerSiguiente);
+        }
+        timerSiguiente = setTimeout(() => {
+          generarSuma();
+        }, 2000);
       }
-
-      if (timerSiguiente) {
-        clearTimeout(timerSiguiente);
-      }
-
-      timerSiguiente = setTimeout(() => {
-        generarSuma();
-      }, 2000);
     }
 
     teclasNumericas.forEach((tecla) => {
