@@ -150,14 +150,11 @@
       margin: 8px 0;
     }
 
-    button, input {
+    button {
       border: none;
       border-radius: 16px;
       padding: 20px 26px;
       font-size: clamp(1.4rem, 3.8vw, 2.3rem);
-    }
-
-    button {
       cursor: pointer;
       color: #fff;
       font-weight: 800;
@@ -172,22 +169,49 @@
       filter: brightness(0.9);
     }
 
-    #btnGenerar {
-      background: linear-gradient(135deg, #1e90ff, #00d2ff);
-    }
-
-    #btnRevisar {
-      background: linear-gradient(135deg, #ff4757, #ff6b81);
-    }
-
-    input {
-      width: min(260px, 80vw);
-      text-align: center;
-      font-weight: 800;
+    .pantalla-respuesta {
+      width: min(420px, 90vw);
+      min-height: 90px;
+      padding: 10px 16px;
       border-radius: 16px;
       border: 3px solid #ffffff88;
-      background: #00000055;
+      background: #00000066;
       color: #fff;
+      font-size: clamp(2.4rem, 8vw, 4.8rem);
+      font-weight: 800;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .teclado {
+      width: min(520px, 94vw);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 8px auto;
+    }
+
+    .tecla {
+      min-height: 86px;
+      background: linear-gradient(135deg, #1e90ff, #00d2ff);
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      padding: 10px;
+    }
+
+    .tecla.borrar {
+      background: linear-gradient(135deg, #ff7f50, #ff9966);
+    }
+
+    .boton-comprobar {
+      width: min(520px, 94vw);
+      min-height: 92px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, #2ed573, #20bf6b);
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
     }
 
     .mensaje {
@@ -208,7 +232,7 @@
     }
 
     .error {
-      color: #ffd166;
+      color: #ff4d4d;
     }
 
     .boss-mensaje { display: none; }
@@ -233,13 +257,26 @@
     <p id="textoNivel" class="texto-nivel"></p>
     <p id="textoProgreso" class="progreso"></p>
 
-    <div id="operacion" class="operacion">TOCA NUEVA SUMA</div>
+    <div id="operacion" class="operacion">0 + 0 = ?</div>
 
-    <div class="fila">
-      <button id="btnGenerar" type="button">NUEVA SUMA</button>
-      <input id="respuesta" type="number" placeholder="Resultado" min="0" max="40">
-      <button id="btnRevisar" type="button">REVISAR</button>
+    <div id="pantallaRespuesta" class="pantalla-respuesta">_</div>
+
+    <div class="teclado">
+      <button class="tecla" type="button" data-num="1">1</button>
+      <button class="tecla" type="button" data-num="2">2</button>
+      <button class="tecla" type="button" data-num="3">3</button>
+      <button class="tecla" type="button" data-num="4">4</button>
+      <button class="tecla" type="button" data-num="5">5</button>
+      <button class="tecla" type="button" data-num="6">6</button>
+      <button class="tecla" type="button" data-num="7">7</button>
+      <button class="tecla" type="button" data-num="8">8</button>
+      <button class="tecla" type="button" data-num="9">9</button>
+      <button class="tecla borrar" type="button" id="btnBorrar">BORRAR</button>
+      <button class="tecla" type="button" data-num="0">0</button>
+      <button class="tecla borrar" type="button" id="btnTodoBorrar">C</button>
     </div>
+
+    <button id="btnComprobar" class="boton-comprobar" type="button">COMPROBAR</button>
 
     <div id="mensaje" class="mensaje"></div>
     <div id="mensajeBoss" class="boss-mensaje"></div>
@@ -251,15 +288,20 @@
     let nivelActual = 1;       // 1 a 6 (6 = BOSS)
     let aciertosNivel = 0;
     const metaPorNivel = 5;    // 5 aciertos para pasar cada nivel
+    let entradaActual = "";
+    let bloqueado = false;
+    let timerSiguiente = null;
 
     const operacion = document.getElementById("operacion");
-    const respuesta = document.getElementById("respuesta");
+    const pantallaRespuesta = document.getElementById("pantallaRespuesta");
     const mensaje = document.getElementById("mensaje");
     const mensajeBoss = document.getElementById("mensajeBoss");
-    const btnGenerar = document.getElementById("btnGenerar");
-    const btnRevisar = document.getElementById("btnRevisar");
+    const btnComprobar = document.getElementById("btnComprobar");
+    const btnBorrar = document.getElementById("btnBorrar");
+    const btnTodoBorrar = document.getElementById("btnTodoBorrar");
     const textoNivel = document.getElementById("textoNivel");
     const textoProgreso = document.getElementById("textoProgreso");
+    const teclasNumericas = document.querySelectorAll("[data-num]");
 
     const chips = [];
     for (let i = 1; i <= 6; i++) {
@@ -270,6 +312,10 @@
       textoNivel.textContent = nivelActual === 6 ? "BOSS FINAL" : "NIVEL " + nivelActual;
       textoProgreso.textContent = aciertosNivel + " / " + metaPorNivel;
       mensajeBoss.textContent = "";
+    }
+
+    function actualizarPantallaRespuesta() {
+      pantallaRespuesta.textContent = entradaActual === "" ? "_" : entradaActual;
     }
 
     function actualizarChips() {
@@ -311,10 +357,11 @@
         operacion.textContent = numero1 + " + " + numero2 + " = ?";
       }
 
-      respuesta.value = "";
-      respuesta.focus();
+      entradaActual = "";
+      actualizarPantallaRespuesta();
       mensaje.textContent = "";
       mensaje.className = "mensaje";
+      bloqueado = false;
     }
 
     function pasarDeNivel() {
@@ -331,15 +378,26 @@
       }
     }
 
-    function revisarRespuesta() {
+    function comprobarRespuesta() {
+      if (bloqueado) {
+        return;
+      }
+
       if (numero1 === null) {
-        mensaje.textContent = "TOCA NUEVA SUMA";
+        mensaje.textContent = "ESPERA";
         mensaje.className = "mensaje error";
         return;
       }
 
-      const valorIngresado = Number(respuesta.value);
+      if (entradaActual === "") {
+        mensaje.textContent = "ESCRIBE UN NÚMERO";
+        mensaje.className = "mensaje error";
+        return;
+      }
+
+      const valorIngresado = Number(entradaActual);
       const resultadoCorrecto = nivelActual === 6 ? numero1 : (numero1 + numero2);
+      bloqueado = true;
 
       if (valorIngresado === resultadoCorrecto) {
         aciertosNivel++;
@@ -354,14 +412,52 @@
         mensaje.textContent = "VUELVE A INTENTARLO, TÚ PUEDES!";
         mensaje.className = "mensaje error";
       }
+
+      if (timerSiguiente) {
+        clearTimeout(timerSiguiente);
+      }
+
+      timerSiguiente = setTimeout(() => {
+        generarSuma();
+      }, 2000);
     }
 
-    btnGenerar.addEventListener("click", generarSuma);
-    btnRevisar.addEventListener("click", revisarRespuesta);
+    teclasNumericas.forEach((tecla) => {
+      tecla.addEventListener("click", () => {
+        if (bloqueado) {
+          return;
+        }
+        if (entradaActual.length >= 2) {
+          return;
+        }
+        entradaActual += tecla.dataset.num;
+        actualizarPantallaRespuesta();
+      });
+    });
+
+    btnBorrar.addEventListener("click", () => {
+      if (bloqueado) {
+        return;
+      }
+      entradaActual = entradaActual.slice(0, -1);
+      actualizarPantallaRespuesta();
+    });
+
+    btnTodoBorrar.addEventListener("click", () => {
+      if (bloqueado) {
+        return;
+      }
+      entradaActual = "";
+      actualizarPantallaRespuesta();
+    });
+
+    btnComprobar.addEventListener("click", comprobarRespuesta);
 
     // Estado inicial de textos y niveles
     actualizarChips();
     actualizarTextoNivel();
+    actualizarPantallaRespuesta();
+    generarSuma();
   </script>
 </body>
 </html>
