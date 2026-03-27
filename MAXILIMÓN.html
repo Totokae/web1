@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAXILIMON - Juego de Sumas</title>
+  <style>
+    :root {
+      --bg1: #0b1023;
+      --bg2: #142850;
+      --card: #1f2a44;
+      --text: #f5f7ff;
+      --accent: #ff4757;
+      --accent2: #2ed573;
+      --accent3: #1e90ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      padding: 20px;
+    }
+
+    .contenedor {
+      width: min(560px, 100%);
+      background: var(--card);
+      border: 3px solid #ffffff22;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 14px 30px #00000066;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitulo {
+      margin-top: 0;
+      margin-bottom: 18px;
+      color: #dbe5ff;
+    }
+
+    .gustos {
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      color: #c7d2ff;
+    }
+
+    .operacion {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 16px 0;
+      min-height: 44px;
+      color: #ffffff;
+      background: #00000026;
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    .fila {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    button, input {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+
+    button {
+      cursor: pointer;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    #btnGenerar {
+      background: var(--accent3);
+    }
+
+    #btnRevisar {
+      background: var(--accent);
+    }
+
+    input {
+      width: 130px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .mensaje {
+      min-height: 52px;
+      margin-top: 14px;
+      border-radius: 12px;
+      padding: 14px;
+      background: #00000026;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .ok {
+      color: var(--accent2);
+    }
+
+    .error {
+      color: #ffd166;
+    }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <h1>MAXILIMON</h1>
+    <p class="subtitulo">Juego de sumas para MAXI (1° básico)</p>
+    <p class="gustos">Tema favorito: Spiderman, Roblox, Minecraft y Geometry Dash</p>
+
+    <div id="operacion" class="operacion">Presiona "Nueva suma"</div>
+
+    <div class="fila">
+      <button id="btnGenerar" type="button">Nueva suma</button>
+      <input id="respuesta" type="number" placeholder="Resultado" min="0" max="20">
+      <button id="btnRevisar" type="button">Revisar</button>
+    </div>
+
+    <div id="mensaje" class="mensaje"></div>
+  </main>
+
+  <script>
+    let numero1 = null;
+    let numero2 = null;
+
+    const operacion = document.getElementById("operacion");
+    const respuesta = document.getElementById("respuesta");
+    const mensaje = document.getElementById("mensaje");
+    const btnGenerar = document.getElementById("btnGenerar");
+    const btnRevisar = document.getElementById("btnRevisar");
+
+    function generarSuma() {
+      numero1 = Math.floor(Math.random() * 11);
+      numero2 = Math.floor(Math.random() * 11);
+      operacion.textContent = numero1 + " + " + numero2 + " = ?";
+      respuesta.value = "";
+      respuesta.focus();
+      mensaje.textContent = "";
+      mensaje.className = "mensaje";
+    }
+
+    function revisarRespuesta() {
+      if (numero1 === null || numero2 === null) {
+        mensaje.textContent = "Primero presiona \"Nueva suma\".";
+        mensaje.className = "mensaje error";
+        return;
+      }
+
+      const valorIngresado = Number(respuesta.value);
+      const resultadoCorrecto = numero1 + numero2;
+
+      if (valorIngresado === resultadoCorrecto) {
+        mensaje.textContent = "MUY BIEN MAXI! SIGUE ASÍ!";
+        mensaje.className = "mensaje ok";
+      } else {
+        mensaje.textContent = "VUELVE A INTENTARLO, TÚ PUEDES!";
+        mensaje.className = "mensaje error";
+      }
+    }
+
+    btnGenerar.addEventListener("click", generarSuma);
+    btnRevisar.addEventListener("click", revisarRespuesta);
+  </script>
+</body>
+</html>
