@@ -32,14 +32,13 @@
       min-height: 100vh;
       background: var(--card);
       padding: 20px;
-      text-align: center;
       position: relative;
       overflow: hidden;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       justify-content: center;
-      align-items: center;
-      gap: 10px;
+      align-items: stretch;
+      gap: 24px;
     }
 
     .fondos-bloques {
@@ -71,12 +70,39 @@
       font-weight: 700;
     }
 
+    .zona-juego {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+      padding: 10px 6px;
+    }
+
+    .panel-niveles {
+      width: min(360px, 30vw);
+      min-width: 250px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+      padding: 20px 12px;
+      background: #00000033;
+      border-left: 3px solid #ffffff33;
+    }
+
     .niveles-barra {
       display: flex;
       justify-content: center;
       gap: 10px;
       margin-bottom: 8px;
       flex-wrap: wrap;
+      max-width: 220px;
     }
 
     .nivel-chip {
@@ -236,50 +262,71 @@
     }
 
     .boss-mensaje { display: none; }
+
+    @media (max-width: 980px) {
+      .contenedor {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .panel-niveles {
+        width: 100%;
+        min-width: 0;
+        border-left: none;
+        border-top: 3px solid #ffffff33;
+      }
+
+      .niveles-barra {
+        max-width: none;
+      }
+    }
   </style>
 </head>
 <body>
   <main class="contenedor">
     <div class="fondos-bloques"></div>
+    <section class="zona-juego">
+      <h1>MAXILIMÓN</h1>
+      <p class="subtitulo">SUMAS</p>
 
-    <h1>MAXILIMÓN</h1>
-    <p class="subtitulo">SUMAS</p>
+      <div id="operacion" class="operacion">0 + 0 = ?</div>
 
-    <div class="niveles-barra">
-      <div class="nivel-chip activo" id="chip-nivel-1"><span>1</span></div>
-      <div class="nivel-chip" id="chip-nivel-2"><span>2</span></div>
-      <div class="nivel-chip" id="chip-nivel-3"><span>3</span></div>
-      <div class="nivel-chip" id="chip-nivel-4"><span>4</span></div>
-      <div class="nivel-chip" id="chip-nivel-5"><span>5</span></div>
-      <div class="nivel-chip boss-chip" id="chip-nivel-6"><span>BOSS</span></div>
-    </div>
+      <div id="pantallaRespuesta" class="pantalla-respuesta">_</div>
 
-    <p id="textoNivel" class="texto-nivel"></p>
-    <p id="textoProgreso" class="progreso"></p>
+      <div class="teclado">
+        <button class="tecla" type="button" data-num="1">1</button>
+        <button class="tecla" type="button" data-num="2">2</button>
+        <button class="tecla" type="button" data-num="3">3</button>
+        <button class="tecla" type="button" data-num="4">4</button>
+        <button class="tecla" type="button" data-num="5">5</button>
+        <button class="tecla" type="button" data-num="6">6</button>
+        <button class="tecla" type="button" data-num="7">7</button>
+        <button class="tecla" type="button" data-num="8">8</button>
+        <button class="tecla" type="button" data-num="9">9</button>
+        <button class="tecla borrar" type="button" id="btnBorrar" aria-label="Borrar último">←</button>
+        <button class="tecla" type="button" data-num="0">0</button>
+        <button class="tecla borrar" type="button" id="btnTodoBorrar" aria-label="Borrar todo">X</button>
+      </div>
 
-    <div id="operacion" class="operacion">0 + 0 = ?</div>
+      <button id="btnComprobar" class="boton-comprobar" type="button">COMPROBAR</button>
 
-    <div id="pantallaRespuesta" class="pantalla-respuesta">_</div>
+      <div id="mensaje" class="mensaje"></div>
+    </section>
 
-    <div class="teclado">
-      <button class="tecla" type="button" data-num="1">1</button>
-      <button class="tecla" type="button" data-num="2">2</button>
-      <button class="tecla" type="button" data-num="3">3</button>
-      <button class="tecla" type="button" data-num="4">4</button>
-      <button class="tecla" type="button" data-num="5">5</button>
-      <button class="tecla" type="button" data-num="6">6</button>
-      <button class="tecla" type="button" data-num="7">7</button>
-      <button class="tecla" type="button" data-num="8">8</button>
-      <button class="tecla" type="button" data-num="9">9</button>
-      <button class="tecla borrar" type="button" id="btnBorrar" aria-label="Borrar último">←</button>
-      <button class="tecla" type="button" data-num="0">0</button>
-      <button class="tecla borrar" type="button" id="btnTodoBorrar" aria-label="Borrar todo">X</button>
-    </div>
+    <aside class="panel-niveles">
+      <div class="niveles-barra">
+        <div class="nivel-chip activo" id="chip-nivel-1"><span>1</span></div>
+        <div class="nivel-chip" id="chip-nivel-2"><span>2</span></div>
+        <div class="nivel-chip" id="chip-nivel-3"><span>3</span></div>
+        <div class="nivel-chip" id="chip-nivel-4"><span>4</span></div>
+        <div class="nivel-chip" id="chip-nivel-5"><span>5</span></div>
+        <div class="nivel-chip boss-chip" id="chip-nivel-6"><span>BOSS</span></div>
+      </div>
 
-    <button id="btnComprobar" class="boton-comprobar" type="button">COMPROBAR</button>
-
-    <div id="mensaje" class="mensaje"></div>
-    <div id="mensajeBoss" class="boss-mensaje"></div>
+      <p id="textoNivel" class="texto-nivel"></p>
+      <p id="textoProgreso" class="progreso"></p>
+      <div id="mensajeBoss" class="boss-mensaje"></div>
+    </aside>
   </main>
 
   <script>
