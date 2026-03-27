@@ -346,6 +346,24 @@
       padding: 20px;
     }
 
+    .imagen-logro {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 45;
+      pointer-events: none;
+      background: #00000066;
+    }
+
+    .imagen-logro img {
+      max-width: min(50vw, 420px);
+      max-height: min(50vh, 420px);
+      object-fit: contain;
+      filter: drop-shadow(0 0 18px #ffffffcc);
+    }
+
     .ok {
       color: var(--accent2);
     }
@@ -437,6 +455,9 @@
       <div id="mensajeBoss" class="boss-mensaje"></div>
     </aside>
   </main>
+  <div id="imagenLogro" class="imagen-logro">
+    <img id="imagenLogroSrc" alt="Logro">
+  </div>
   <div id="anuncioNivel" class="anuncio-nivel"></div>
 
   <script>
@@ -462,8 +483,20 @@
     const progresoRelleno = document.getElementById("progresoRelleno");
     const bossVidaWrap = document.getElementById("bossVidaWrap");
     const bossVidaRelleno = document.getElementById("bossVidaRelleno");
+    const imagenLogro = document.getElementById("imagenLogro");
+    const imagenLogroSrc = document.getElementById("imagenLogroSrc");
     const anuncioNivel = document.getElementById("anuncioNivel");
     const teclasNumericas = document.querySelectorAll("[data-num]");
+    let timerImagen = null;
+
+    const imagenesPorNivel = {
+      1: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_feliz-ea4ab53c-05e7-4ffa-817b-6effbadac2dc.png",
+      2: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_feliz4-123ae5a9-d714-44c0-948e-4f358797d340.png",
+      3: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_feliz2-c8a548f6-cc3f-4016-bbb1-3d5b1bc5b2c7.png",
+      4: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_spider3-d5091d7a-905d-42d0-ba6e-bab2e49a4a84.png",
+      5: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_bu-acf2f5b2-2a50-42ad-97d7-0043e8e90156.png",
+      6: "file:///C:/Users/caosm/.cursor/projects/c-Users-caosm-OneDrive-Escritorio-APPS-web1/assets/c__Users_caosm_AppData_Roaming_Cursor_User_workspaceStorage_d16b9b5ccc08f0031debe2e99bc36cfe_images_aa-9790cd8f-df6a-4be5-9f07-15da45998560.png"
+    };
 
     const chips = [];
     for (let i = 1; i <= 6; i++) {
@@ -505,6 +538,24 @@
       anuncioNivel.style.display = "none";
     }
 
+    function mostrarImagenLogro() {
+      const ruta = imagenesPorNivel[nivelActual];
+      if (!ruta) {
+        return;
+      }
+
+      imagenLogroSrc.src = ruta;
+      imagenLogro.style.display = "flex";
+
+      if (timerImagen) {
+        clearTimeout(timerImagen);
+      }
+
+      timerImagen = setTimeout(() => {
+        imagenLogro.style.display = "none";
+      }, 1000);
+    }
+
     function actualizarPantallaRespuesta() {
       pantallaRespuesta.textContent = entradaActual === "" ? "_" : entradaActual;
     }
@@ -520,33 +571,30 @@
       }
     }
 
-    function rangoMaximoSegunNivel() {
-      switch (nivelActual) {
-        case 1: return 5;
-        case 2: return 10;
-        case 3: return 12;
-        case 4: return 15;
-        case 5: return 20;
-        case 6: return 20; // boss: usaremos dos sumas encadenadas pero con estos límites
-        default: return 10;
-      }
-    }
-
     function generarSuma() {
-      const max = rangoMaximoSegunNivel();
-      numero1 = Math.floor(Math.random() * (max + 1));
-      numero2 = Math.floor(Math.random() * (max + 1));
-
-      if (nivelActual === 6) {
-        // Boss: operación doble
-        const extra1 = Math.floor(Math.random() * 6);  // 0-5
-        const extra2 = Math.floor(Math.random() * 6);
-        operacion.textContent = "(" + numero1 + " + " + numero2 + ") + (" + extra1 + " + " + extra2 + ") = ?";
-        numero1 = numero1 + numero2 + extra1 + extra2;
-        numero2 = 0;
+      if (nivelActual === 1) {
+        // Nivel 1: primer número solo 0 o 1
+        numero1 = Math.floor(Math.random() * 2); // 0 o 1
+        numero2 = Math.floor(Math.random() * 11); // 0 a 10
+      } else if (nivelActual === 2) {
+        numero1 = Math.floor(Math.random() * 5); // 0 a 4
+        numero2 = Math.floor(Math.random() * 5); // 0 a 4
+      } else if (nivelActual === 3) {
+        numero1 = Math.floor(Math.random() * 7); // 0 a 6
+        numero2 = Math.floor(Math.random() * 7); // 0 a 6
+      } else if (nivelActual === 4) {
+        numero1 = Math.floor(Math.random() * 9); // 0 a 8
+        numero2 = Math.floor(Math.random() * 9); // 0 a 8
+      } else if (nivelActual === 5) {
+        numero1 = Math.floor(Math.random() * 11); // 0 a 10
+        numero2 = Math.floor(Math.random() * 11); // 0 a 10
       } else {
-        operacion.textContent = numero1 + " + " + numero2 + " = ?";
+        // Boss Fight: 1 a 10
+        numero1 = Math.floor(Math.random() * 10) + 1;
+        numero2 = Math.floor(Math.random() * 10) + 1;
       }
+
+      operacion.textContent = numero1 + " + " + numero2 + " = ?";
 
       entradaActual = "";
       actualizarPantallaRespuesta();
@@ -591,7 +639,7 @@
       }
 
       const valorIngresado = Number(entradaActual);
-      const resultadoCorrecto = nivelActual === 6 ? numero1 : (numero1 + numero2);
+      const resultadoCorrecto = numero1 + numero2;
       bloqueado = true;
 
       if (valorIngresado === resultadoCorrecto) {
@@ -604,6 +652,10 @@
           subioNivel = pasarDeNivel();
         } else {
           textoProgreso.textContent = aciertosNivel + " / " + metaPorNivel;
+        }
+
+        if (!subioNivel) {
+          mostrarImagenLogro();
         }
 
         if (timerSiguiente) {
