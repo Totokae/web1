@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0e0e1a;font-family:'Segoe UI',sans-serif;color:#ddd;user-select:none;}
+#wrap{display:grid;grid-template-rows:auto 1fr auto;height:100vh;min-height:560px;}
+
+/* top bar */
+#topbar{background:#070712;border-bottom:1px solid #1a1a30;padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+#topbar h1{font-size:11px;font-weight:500;color:#7af;letter-spacing:.07em;text-transform:uppercase;flex:1;min-width:160px;}
+.ctrl{display:flex;align-items:center;gap:5px;}
+.ctrl label{font-size:10px;color:#666;}
+.ctrl input[type=range]{width:68px;accent-color:#4af;}
+.ctrl span{font-size:10px;color:#4af;font-family:monospace;min-width:28px;}
+select{background:#070712;border:0.5px solid #2a2a44;color:#aaa;font-size:10px;padding:3px 6px;border-radius:4px;cursor:pointer;}
+#btn-go{padding:5px 14px;background:#0a2a3a;border:1px solid #4af;border-radius:5px;color:#4af;font-size:11px;cursor:pointer;font-weight:500;transition:all .2s;}
+#btn-go:hover{background:#4af;color:#000;}
+#btn-go:disabled{opacity:.35;cursor:default;}
+#btn-rst{padding:5px 10px;background:transparent;border:0.5px solid #333;border-radius:5px;color:#777;font-size:11px;cursor:pointer;}
+#btn-rst:hover{color:#ccc;border-color:#666;}
+
+/* main content */
+#main{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center;gap:0;padding:12px 16px;overflow:hidden;}
+
+/* panel shared */
+.panel{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.panel-title{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;}
+.panel-sub{font-size:9px;color:#555;text-align:center;line-height:1.4;}
+.panel-badge{font-size:9px;background:#0a1a2a;border:0.5px solid #2a4a6a;color:#4af;padding:2px 8px;border-radius:10px;}
+
+/* boards */
+#board-wrap,#plate-wrap{position:relative;}
+canvas{display:block;border-radius:4px;}
+#c-board{border:1px solid #3a3a5a;background:#1a1a2e;}
+#c-plate{border:1px solid #1a4a2a;background:#050510;}
+
+/* flow connector */
+#flow-col{display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:center;}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.flow-icon{width:32px;height:32px;border-radius:50%;border:1px solid #2a2a44;background:#0d0d1a;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .4s;}
+.flow-icon.active{border-color:#4af;box-shadow:0 0 8px #4af6;}
+.flow-icon.done{border-color:#4f9;background:#0a1f12;}
+.flow-label{font-size:8px;color:#555;text-align:center;line-height:1.3;max-width:64px;}
+.flow-label.active{color:#4af;}
+.flow-label.done{color:#4f9;}
+.flow-arrow{font-size:10px;color:#2a2a44;line-height:1;}
+.flow-arrow.active{color:#4af;}
+canvas#c-dots{position:absolute;top:0;left:0;pointer-events:none;}
+
+/* status bar */
+#statusbar{background:#070712;border-top:1px solid #1a1a30;padding:6px 16px;display:flex;align-items:center;gap:12px;}
+#status-text{font-size:10px;color:#7af;flex:1;}
+#dot-stat{font-size:10px;color:#4f9;font-family:monospace;}
+#pct-stat{font-size:10px;color:#4af;font-family:monospace;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="topbar">
+    <h1>Placa táctil matemática · 256×256</h1>
+    <div class="ctrl"><label>Función:</label>
+      <select id="selFn">
+        <option value="quad">f(x) = ax²+bx+c</option>
+        <option value="sin">f(x) = A·sin(ωx+φ)+c</option>
+      </select>
+    </div>
+    <div class="ctrl"><label>a/A =</label><input type="range" id="slA" min="-3" max="3" step=".5" value="1"><span id="vA">1</span></div>
+    <div class="ctrl"><label>b/ω =</label><input type="range" id="slB" min="-5" max="5" step=".5" value="0"><span id="vB">0</span></div>
+    <div class="ctrl"><label>c =</label><input type="range" id="slC" min="-4" max="4" step=".5" value="-1"><span id="vC">-1</span></div>
+    <button id="btn-go" onclick="startFlow()">⚡ Activar gatillo</button>
+    <button id="btn-rst" onclick="resetFlow()">↺ Reiniciar</button>
+  </div>
+
+  <div id="main">
+    <!-- LEFT: whiteboard -->
+    <div class="panel" id="board-panel">
+      <div class="panel-title" style="color:#7af">📋 Pizarra</div>
+      <div class="panel-badge">ESP32-CAM · WiFi</div>
+      <div style="position:relative;">
+        <canvas id="c-board"></canvas>
+        <canvas id="c-dots"></canvas>
+      </div>
+      <div class="panel-sub" id="formula-disp">f(x) = x² − 1</div>
+      <div class="panel-sub">Captura inalámbrica · sin cables</div>
+    </div>
+
+    <!-- CENTER: flow -->
+    <div id="flow-col">
+      <div class="flow-step">
+        <div class="flow-icon" id="fi0">📷</div>
+        <div class="flow-label" id="fl0">Captura<br>imagen</div>
+      </div>
+      <div class="flow-arrow" id="fa0">▼</div>
+      <div class="flow-step">
+        <div class="flow-icon" id="fi1">📡</div>
+        <div class="flow-label" id="fl1">WiFi<br>al PC</div>
+      </div>
+      <div class="flow-arrow" id="fa1">▼</div>
+      <div class="flow-step">
+        <div class="flow-icon" id="fi2">💻</div>
+        <div class="flow-label" id="fl2">OpenCV<br>OCR<br>Bresenham</div>
+      </div>
+      <div class="flow-arrow" id="fa2">▼</div>
+      <div class="flow-step">
+        <div class="flow-icon" id="fi3">📡</div>
+        <div class="flow-label" id="fl3">Datos a<br>placa</div>
+      </div>
+      <div class="flow-arrow" id="fa3">▼</div>
+      <div class="flow-step">
+        <div class="flow-icon" id="fi4">🖐</div>
+        <div class="flow-label" id="fl4">Placa<br>táctil</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: tactile plate -->
+    <div class="panel" id="plate-panel">
+      <div class="panel-title" style="color:#4f9">🖐 Placa táctil</div>
+      <div class="panel-badge" style="border-color:#1a4a2a;color:#4f9;">256 × 256 pines · FPGA</div>
+      <canvas id="c-plate"></canvas>
+      <div class="panel-sub" id="vertex-disp">Vértice: (0, −1)</div>
+      <div class="panel-sub">Activación por demanda · código abierto</div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <div id="status-text">Sistema listo — ajusta los parámetros y activa el gatillo</div>
+    <div id="pct-stat">0%</div>
+    <div id="dot-stat">0 / 256 pines activos</div>
+  </div>
+</div>
+
+<script>
+// ── state ────────────────────────────────────────────────
+const P={a:1,b:0,c:-1,fn:'quad'};
+let flowPhase=-1, progress=0, animRaf=null, phaseTimer=null;
+let trailOffset=0;
+
+// ── canvas setup ─────────────────────────────────────────
+const cBoard=document.getElementById('c-board');
+const ctxB=cBoard.getContext('2d');
+const cDots=document.getElementById('c-dots');
+const ctxD=cDots.getContext('2d');
+const cPlate=document.getElementById('c-plate');
+const ctxP=cPlate.getContext('2d');
+
+function setCanvasSizes(){
+  const main=document.getElementById('main');
+  const totalW=main.clientWidth;
+  const flowW=80;
+  const sideW=Math.floor((totalW-flowW-32)/2);
+  const mainH=main.clientHeight-60;
+  const sz=Math.min(sideW,mainH,340);
+
+  cBoard.width=sz;cBoard.height=sz;
+  cDots.width=sz;cDots.height=sz;
+  cPlate.width=sz;cPlate.height=sz;
+}
+
+// ── math ─────────────────────────────────────────────────
+function evalFn(x){
+  const{a,b,c,fn}=P;
+  return fn==='quad'?a*x*x+b*x+c:a*Math.sin((b||1)*x)+c;
+}
+
+// Map x in [-5,5] to board pixel column
+// Map y to board pixel row (center = mid)
+const XMIN=-5,XMAX=5,YMIN=-6,YMAX=6;
+function toBoard(x,y,sz){
+  return{
+    px:(x-XMIN)/(XMAX-XMIN)*sz,
+    py:sz-(y-YMIN)/(YMAX-YMIN)*sz
+  };
+}
+
+// For plate: sample 256 columns, compute row in [0,255]
+function plateSamples(){
+  const cols=256;
+  const pts=[];
+  for(let i=0;i<cols;i++){
+    const x=XMIN+(XMAX-XMIN)*(i/cols);
+    const y=evalFn(x);
+    const row=Math.round((1-(y-YMIN)/(YMAX-YMIN))*255);
+    pts.push({col:i,row:Math.max(0,Math.min(255,row))});
+  }
+  return pts;
+}
+
+// ── draw board ───────────────────────────────────────────
+function drawBoard(){
+  const sz=cBoard.width;
+  const cx=ctxB;
+  cx.clearRect(0,0,sz,sz);
+
+  // board background
+  cx.fillStyle='#1c1c2e';
+  cx.fillRect(0,0,sz,sz);
+
+  // grid
+  cx.strokeStyle='#252538';cx.lineWidth=.5;
+  for(let i=0;i<=10;i++){
+    const x=sz*i/10;const y=sz*i/10;
+    cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,sz);cx.stroke();
+    cx.beginPath();cx.moveTo(0,y);cx.lineTo(sz,y);cx.stroke();
+  }
+
+  // axes
+  const origin=toBoard(0,0,sz);
+  cx.strokeStyle='#4a4a6a';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(0,origin.py);cx.lineTo(sz,origin.py);cx.stroke();
+  cx.beginPath();cx.moveTo(origin.px,0);cx.lineTo(origin.px,sz);cx.stroke();
+
+  // axis labels
+  cx.fillStyle='#4a4a7a';cx.font=`${Math.max(9,sz*.03)}px monospace`;cx.textAlign='center';
+  for(let x=-4;x<=4;x+=2){
+    if(x===0)continue;
+    const pp=toBoard(x,0,sz);
+    cx.fillText(x,pp.px,origin.py+10);
+  }
+  cx.textAlign='right';
+  for(let y=-4;y<=4;y+=2){
+    if(y===0)continue;
+    const pp=toBoard(0,y,sz);
+    cx.fillText(y,origin.px-4,pp.py+4);
+  }
+  cx.fillStyle='#6a6a9a';cx.font=`${Math.max(10,sz*.035)}px monospace`;
+  cx.textAlign='left';cx.fillText('f(x)',origin.px+4,12);
+  cx.textAlign='left';cx.fillText('x',sz-14,origin.py-4);
+
+  // function curve
+  cx.strokeStyle='#fff';cx.lineWidth=2;cx.lineJoin='round';
+  cx.beginPath();
+  let first=true;
+  const steps=300;
+  for(let i=0;i<=steps;i++){
+    const x=XMIN+(XMAX-XMIN)*(i/steps);
+    const y=evalFn(x);
+    if(y<YMIN-1||y>YMAX+1){first=true;continue;}
+    const pp=toBoard(x,y,sz);
+    if(first){cx.moveTo(pp.px,pp.py);first=false;}
+    else cx.lineTo(pp.px,pp.py);
+  }
+  cx.stroke();
+
+  // vertex / key point marker
+  const{a,b,c,fn}=P;
+  if(fn==='quad'){
+    const vx=-b/(2*a);const vy=evalFn(vx);
+    if(vy>=YMIN&&vy<=YMAX){
+      const pp=toBoard(vx,vy,sz);
+      cx.beginPath();cx.arc(pp.px,pp.py,4,0,Math.PI*2);
+      cx.fillStyle='#ff6644';cx.fill();
+    }
+  }
+
+  // formula
+  const{fn:f}=P;
+  let fStr=f==='quad'?`f(x) = ${a}x² ${b>=0?'+ ':'− '}${Math.abs(b)}x ${c>=0?'+ ':'− '}${Math.abs(c)}`:`f(x) = ${a}·sin(${b||1}x) ${c>=0?'+ ':'− '}${Math.abs(c)}`;
+  cx.fillStyle='#adf';cx.font=`bold ${Math.max(10,sz*.033)}px Segoe UI`;cx.textAlign='left';
+  cx.fillText(fStr,8,sz-10);
+
+  // vertex info
+  if(P.fn==='quad'){
+    const vx=-P.b/(2*P.a);const vy=evalFn(vx);
+    document.getElementById('vertex-disp').textContent=`Vértice: (${vx.toFixed(2)}, ${vy.toFixed(2)})`;
+  } else {
+    document.getElementById('vertex-disp').textContent=`Amplitud: ${P.a} · ω: ${P.b||1}`;
+  }
+  let fDisp=P.fn==='quad'?`f(x) = ${P.a}x² ${P.b>=0?'+ ':'− '}${Math.abs(P.b)}x ${P.c>=0?'+ ':'− '}${Math.abs(P.c)}`:`f(x) = ${P.a}·sin(${P.b||1}x) ${P.c>=0?'+ ':'− '}${Math.abs(P.c)}`;
+  document.getElementById('formula-disp').textContent=fDisp;
+}
+
+// ── draw plate ───────────────────────────────────────────
+function drawPlate(prog){
+  const sz=cPlate.width;
+  const cx=ctxP;
+  cx.clearRect(0,0,sz,sz);
+  cx.fillStyle='#04040e';
+  cx.fillRect(0,0,sz,sz);
+
+  // We render a 64x64 visual representation of the 256x256 plate
+  // Each visual cell = 4x4 physical pins
+  const VCOLS=64,VROWS=64;
+  const cw=sz/VCOLS,ch=sz/VROWS;
+  const samples=plateSamples();
+
+  // build active set: for each of 256 cols, the active row
+  // prog: 0..1 = how many cols are activated (left to right)
+  const activeCols=Math.floor(prog*256);
+
+  for(let vc=0;vc<VCOLS;vc++){
+    const physCol=Math.floor(vc*4); // maps to physical col 0..252
+    const activeForThisCol=physCol<activeCols;
+    // find the 4 physical cols for this visual cell
+    for(let vr=0;vr<VROWS;vr++){
+      const physRow=Math.floor(vr*4);
+      // check if any of the 4x4 physical pins in this cell is active
+      let isOn=false;
+      if(activeForThisCol){
+        for(let dc=0;dc<4;dc++){
+          const s=samples[physCol+dc];
+          if(s&&Math.floor(s.row/4)===vr){isOn=true;break;}
+        }
+      }
+      const x=vc*cw,y=vr*ch;
+      const r=Math.min(cw,ch)*.36;
+      cx.beginPath();
+      cx.arc(x+cw*.5,y+ch*.5,r,0,Math.PI*2);
+      if(isOn){
+        const glow=.7+.3*Math.sin(Date.now()*.004+vc*.15);
+        cx.fillStyle=`rgba(80,255,140,${glow})`;
+        // glow effect
+        cx.shadowColor='#4f9';cx.shadowBlur=3;
+      } else {
+        cx.fillStyle='#0e0e1e';cx.shadowBlur=0;
+      }
+      cx.fill();
+      cx.shadowBlur=0;
+    }
+  }
+
+  // border scan line
+  if(prog>0&&prog<1){
+    const scanX=Math.floor(prog*sz);
+    cx.strokeStyle='rgba(80,255,140,.3)';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(scanX,0);cx.lineTo(scanX,sz);cx.stroke();
+  }
+
+  // corner label
+  cx.fillStyle='#1a4a2a';cx.font=`${Math.max(8,sz*.025)}px monospace`;cx.textAlign='right';
+  cx.fillText('256×256',sz-4,sz-4);
+  const active=Math.floor(prog*256);
+  document.getElementById('dot-stat').textContent=`${active*4} / ${256*256} pines activos`;
+  document.getElementById('pct-stat').textContent=`${Math.round(prog*100)}%`;
+}
+
+// ── animated dots on board → plate ───────────────────────
+function drawDotTrail(){
+  const sz=cDots.width;
+  ctxD.clearRect(0,0,sz,sz);
+  if(flowPhase<0||flowPhase>1)return;
+  // dots traveling from board edge rightward (indicating capture/send)
+  const N=10;
+  for(let i=0;i<N;i++){
+    const t=((trailOffset+i/N)%1);
+    const x=t*sz;
+    const y=sz*.5;
+    ctxD.beginPath();ctxD.arc(x,y,3,0,Math.PI*2);
+    ctxD.fillStyle=`rgba(80,180,255,${1-i/N})`;
+    ctxD.fill();
+  }
+}
+
+// ── flow icons ───────────────────────────────────────────
+function setFlowPhase(ph){
+  for(let i=0;i<5;i++){
+    const ic=document.getElementById('fi'+i);
+    const lb=document.getElementById('fl'+i);
+    const ar=document.getElementById('fa'+i);
+    ic.className='flow-icon'+(i<ph?' done':i===ph?' active':'');
+    lb.className='flow-label'+(i<ph?' done':i===ph?' active':'');
+    if(ar)ar.className='flow-arrow'+(i<=ph?' active':'');
+  }
+}
+
+const PHASE_STATUS=[
+  '📷 ESP32-CAM activada — capturando imagen de la pizarra...',
+  '📡 Transmitiendo imagen por WiFi al computador...',
+  '💻 OpenCV limpiando imagen · Tesseract OCR reconociendo función · Bresenham vectorizando...',
+  '📡 Enviando coordenadas táctiles a la placa física...',
+  '🖐 ¡Placa táctil activada! Función disponible para exploración táctil.'
+];
+const PHASE_DELAYS=[900,1100,1800,1000,0];
+
+function advancePhase(){
+  flowPhase++;
+  if(flowPhase>4)return;
+  setFlowPhase(flowPhase);
+  document.getElementById('status-text').textContent=PHASE_STATUS[flowPhase]||'';
+  if(flowPhase<4){
+    phaseTimer=setTimeout(advancePhase,PHASE_DELAYS[flowPhase]);
+  }
+}
+
+function startFlow(){
+  if(flowPhase>=0)return;
+  document.getElementById('btn-go').disabled=true;
+  progress=0;
+  advancePhase();
+}
+
+function resetFlow(){
+  if(phaseTimer)clearTimeout(phaseTimer);
+  flowPhase=-1;progress=0;
+  setFlowPhase(-1);
+  document.getElementById('status-text').textContent='Sistema listo — ajusta los parámetros y activa el gatillo';
+  document.getElementById('btn-go').disabled=false;
+  document.getElementById('dot-stat').textContent='0 / 65536 pines activos';
+  document.getElementById('pct-stat').textContent='0%';
+}
+
+// ── sliders ──────────────────────────────────────────────
+function bindSlider(id,vid,key){
+  document.getElementById(id).addEventListener('input',function(){
+    P[key]=parseFloat(this.value);
+    document.getElementById(vid).textContent=this.value;
+  });
+}
+bindSlider('slA','vA','a');
+bindSlider('slB','vB','b');
+bindSlider('slC','vC','c');
+document.getElementById('selFn').addEventListener('change',e=>P.fn=e.target.value);
+
+// ── main loop ────────────────────────────────────────────
+let last=0;
+function loop(ts){
+  animRaf=requestAnimationFrame(loop);
+  const dt=(ts-last)/1000;last=ts;
+  trailOffset=(trailOffset+dt*.5)%1;
+
+  if(flowPhase>=3&&progress<1){
+    progress=Math.min(1,progress+dt*.25);
+  }
+
+  drawBoard();
+  drawDotTrail();
+  drawPlate(progress);
+}
+
+// ── resize ───────────────────────────────────────────────
+function resize(){
+  setCanvasSizes();
+}
+window.addEventListener('resize',resize);
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
